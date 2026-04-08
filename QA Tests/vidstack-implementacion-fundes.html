@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vidstack — Investigación Técnica · FUNDES LMS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & tokens ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:       #0d1117;
+    --ink-2:     #3a3f4b;
+    --ink-3:     #6b7280;
+    --paper:     #fafaf8;
+    --surface:   #f3f2ee;
+    --border:    #e2e0d8;
+    --accent:    #1d4ed8;
+    --accent-lt: #dbeafe;
+    --accent-dk: #1e3a8a;
+    --green:     #166534;
+    --green-lt:  #dcfce7;
+    --red:       #991b1b;
+    --red-lt:    #fee2e2;
+    --amber:     #92400e;
+    --amber-lt:  #fef3c7;
+    --purple:    #5b21b6;
+    --purple-lt: #ede9fe;
+    --tag-h:     20px;
+    --r:         6px;
+    --r-lg:      12px;
+    --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+    --mono: 'DM Mono', monospace;
+    --body: 'Outfit', sans-serif;
+    --serif: 'DM Serif Display', serif;
+  }
+
+  /* ── Base ────────────────────────────────────────────── */
+  body {
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--paper);
+    padding: 0;
+  }
+
+  /* ── Layout ──────────────────────────────────────────── */
+  .page { max-width: 860px; margin: 0 auto; padding: 0 32px 80px; }
+
+  /* ── Cover ───────────────────────────────────────────── */
+  .cover {
+    background: var(--ink);
+    color: #fff;
+    padding: 64px 32px 52px;
+    margin-bottom: 0;
+  }
+  .cover-inner { max-width: 860px; margin: 0 auto; }
+  .cover-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cover-eyebrow span { color: rgba(255,255,255,.2); }
+  .cover h1 {
+    font-family: var(--serif);
+    font-size: clamp(36px, 6vw, 58px);
+    line-height: 1.1;
+    font-weight: 400;
+    letter-spacing: -.01em;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+  .cover h1 em { font-style: italic; color: rgba(255,255,255,.6); }
+  .cover-sub {
+    font-size: 16px;
+    color: rgba(255,255,255,.55);
+    font-weight: 300;
+    max-width: 560px;
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cover-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,.15);
+    color: rgba(255,255,255,.5);
+    letter-spacing: .04em;
+  }
+  .cover-tag.hi { border-color: rgba(99,179,237,.4); color: rgba(99,179,237,.9); }
+
+  /* ── TOC strip ───────────────────────────────────────── */
+  .toc-strip {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+  }
+  .toc-inner { max-width: 860px; margin: 0 auto; }
+  .toc-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 16px 0 8px;
+  }
+  .toc-list { list-style: none; padding-bottom: 16px; }
+  .toc-list li { display: flex; align-items: baseline; gap: 6px; line-height: 1.9; }
+  .toc-num { font-family: var(--mono); font-size: 10px; color: var(--ink-3); min-width: 20px; }
+  .toc-list a { font-size: 13px; color: var(--accent); text-decoration: none; }
+  .toc-list a:hover { text-decoration: underline; }
+
+  /* ── Section ─────────────────────────────────────────── */
+  .section { margin-top: 56px; }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 400;
+    line-height: 1.25;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 28px 0 8px;
+    letter-spacing: -.01em;
+  }
+  p { color: var(--ink-2); margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+  strong { color: var(--ink); font-weight: 600; }
+
+  /* ── MEJ cards ───────────────────────────────────────── */
+  .mej-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 24px 0; }
+  .mej-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .mej-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .mej-card.blue::before { background: var(--accent); }
+  .mej-card.green::before { background: #16a34a; }
+  .mej-card.purple::before { background: #7c3aed; }
+  .mej-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: .08em;
+    margin-bottom: 6px;
+  }
+  .mej-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 8px; line-height: 1.4; }
+  .mej-desc { font-size: 12px; color: var(--ink-3); line-height: 1.6; margin-bottom: 10px; }
+  .mej-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: .04em;
+  }
+  .badge-vt { background: var(--amber-lt); color: var(--amber); }
+  .badge-gl { background: var(--accent-lt); color: var(--accent-dk); }
+
+  /* ── Callout boxes ───────────────────────────────────── */
+  .callout {
+    border-radius: var(--r-lg);
+    padding: 16px 20px;
+    margin: 20px 0;
+    border-left: 3px solid;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .callout p { font-size: 14px; margin-bottom: 8px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.info { background: var(--accent-lt); border-color: var(--accent); color: var(--accent-dk); }
+  .callout.info strong { color: var(--accent-dk); }
+  .callout.warning { background: var(--amber-lt); border-color: #d97706; color: var(--amber); }
+  .callout.warning strong { color: var(--amber); }
+  .callout.success { background: var(--green-lt); border-color: #16a34a; color: var(--green); }
+  .callout.success strong { color: var(--green); }
+  .callout.tip { background: var(--purple-lt); border-color: #7c3aed; color: var(--purple); }
+  .callout.tip strong { color: var(--purple); }
+
+  /* ── Code blocks ─────────────────────────────────────── */
+  .code-wrap { margin: 20px 0; }
+  .code-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #1e2330;
+    padding: 10px 16px;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: block;
+  }
+  .code-dots .r { background: #ff5f57; }
+  .code-dots .y { background: #febc2e; }
+  .code-dots .g { background: #28c840; }
+  .code-filename {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(255,255,255,.4);
+    letter-spacing: .04em;
+  }
+  pre {
+    background: #161b27;
+    padding: 20px;
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: #abb2bf;
+  }
+  .t-kw    { color: #c678dd; }
+  .t-fn    { color: #61afef; }
+  .t-str   { color: #98c379; }
+  .t-cmt   { color: #5c6370; font-style: italic; }
+  .t-prop  { color: #e06c75; }
+  .t-num   { color: #d19a66; }
+  .t-tag   { color: #e06c75; }
+  .t-attr  { color: #d19a66; }
+  .t-val   { color: #98c379; }
+  .t-punct { color: #abb2bf; }
+
+  /* ── Step-by-step ────────────────────────────────────── */
+  .steps { margin: 24px 0; }
+  .step {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 36px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    box-shadow: var(--shadow);
+  }
+  .step-body { flex: 1; }
+  .step-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .step-desc { font-size: 14px; color: var(--ink-2); margin-bottom: 12px; line-height: 1.65; }
+  .step-desc strong { color: var(--ink); }
+
+  /* ── Change table ────────────────────────────────────── */
+  .change-list { margin: 16px 0; }
+  .change-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    color: var(--ink-2);
+    line-height: 1.55;
+  }
+  .change-item:last-child { border-bottom: none; }
+  .change-item strong { color: var(--ink); }
+  .ch-badge {
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+    margin-top: 2px;
+    letter-spacing: .04em;
+    white-space: nowrap;
+  }
+  .ch-rm   { background: var(--red-lt); color: var(--red); }
+  .ch-add  { background: var(--green-lt); color: var(--green); }
+  .ch-mod  { background: var(--accent-lt); color: var(--accent-dk); }
+  .ch-a11y { background: var(--purple-lt); color: var(--purple); }
+
+  /* ── QA table ────────────────────────────────────────── */
+  .qa-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 16px; }
+  .qa-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .qa-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--ink-2);
+    line-height: 1.55;
+  }
+  .qa-table tr:last-child td { border-bottom: none; }
+  .qa-table td:first-child {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .qa-table td strong { color: var(--ink); }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  .doc-footer {
+    margin-top: 72px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .doc-footer span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: .04em;
+  }
+
+  /* ── Inline code ─────────────────────────────────────── */
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  /* ── Responsive ──────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .page { padding: 0 20px 60px; }
+    .cover, .toc-strip { padding-left: 20px; padding-right: 20px; }
+    .mej-grid { grid-template-columns: 1fr; }
+    .step { gap: 14px; }
+  }
+
+  /* ── Print ───────────────────────────────────────────── */
+  @media print {
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .mej-card::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-inner">
+    <div class="cover-eyebrow">
+      IT-PRO MX <span>|</span> servicio.lms.ai <span>|</span> Investigación Técnica
+    </div>
+    <h1>Vidstack <em>Player</em><br>para FUNDES LMS</h1>
+    <p class="cover-sub">Investigación técnica y guía de implementación para mejorar la experiencia de reproducción de video y audio en producción — abordando las mejoras MEJ-064, MEJ-065 y MEJ-066.</p>
+    <div class="cover-meta">
+      <span class="cover-tag hi">MEJ-064 · Controles de video</span>
+      <span class="cover-tag hi">MEJ-065 · Colores de audio</span>
+      <span class="cover-tag hi">MEJ-066 · Portada en audio</span>
+      <span class="cover-tag">Validación Técnica</span>
+      <span class="cover-tag">02 Abr 2026</span>
+      <span class="cover-tag">@vidstack/react v1.12+</span>
+    </div>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc-strip">
+  <div class="toc-inner">
+    <div class="toc-title">Contenido</div>
+    <ol class="toc-list">
+      <li><span class="toc-num">01</span><a href="#contexto">Contexto y problema</a></li>
+      <li><span class="toc-num">02</span><a href="#mejoras">Las tres mejoras a resolver</a></li>
+      <li><span class="toc-num">03</span><a href="#que-es-vidstack">¿Qué es Vidstack y por qué ya lo usamos?</a></li>
+      <li><span class="toc-num">04</span><a href="#implementacion">Implementación paso a paso</a></li>
+      <li><span class="toc-num">05</span><a href="#cambios-detallados">Cambios detallados por mejora</a></li>
+      <li><span class="toc-num">06</span><a href="#accesibilidad">Accesibilidad y dispositivos móviles</a></li>
+      <li><span class="toc-num">07</span><a href="#qa">Casos de prueba relacionados</a></li>
+      <li><span class="toc-num">08</span><a href="#referencias">Referencias y recursos</a></li>
+    </ol>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- SECCIÓN 01 -->
+  <div class="section" id="contexto">
+    <div class="section-label">01 — Contexto y problema</div>
+    <h2>¿Por qué necesitamos intervenir el reproductor?</h2>
+    <p>Durante la sesión de QA del 27 de marzo de 2026 con José Cedillo y Aide Peralta, el cliente identificó tres puntos de fricción concretos relacionados con la reproducción de media. El feedback fue claro y consistente: <strong>los controles del reproductor de video no siguen los estándares de usabilidad que los usuarios ya conocen</strong>, y el reproductor de audio tiene problemas de visibilidad en ambos temas de la plataforma.</p>
+    <p>La retroalimentación textual del cliente fue la siguiente:</p>
+    <div class="callout info">
+      <p><strong>"Por usabilidad, los controles de video deben estar donde todos los controles de video están por estándar, en la parte de abajo. Aparecen del lado izquierdo."</strong></p>
+      <p>"Podemos dejar solo los controles de video necesarios: avanzar, retroceder, play, pausa, pantalla completa. Eliminar el PIP y Google Cast."</p>
+      <p>"El video sí debe tener la barra de avance como ya lo colocaron en el podcast."</p>
+    </div>
+    <p>Adicionalmente, para usuarios con capacidades diferentes, tener los controles superpuestos sobre el video —en lugar de una barra dedicada debajo— representa una barrera real de accesibilidad: las zonas de toque son pequeñas, el contraste puede ser insuficiente, y la navegación por teclado se vuelve impredecible.</p>
+  </div>
+
+  <!-- SECCIÓN 02 -->
+  <div class="section" id="mejoras">
+    <div class="section-label">02 — Las tres mejoras a resolver</div>
+    <h2>MEJ-064, MEJ-065 y MEJ-066</h2>
+    <p>Las tres mejoras viven actualmente en estado de <strong>Validación Técnica</strong>, lo que significa que este documento es precisamente la investigación que determina su viabilidad y cómo implementarlas. A continuación el resumen de cada una:</p>
+
+    <div class="mej-grid">
+      <div class="mej-card blue">
+        <div class="mej-id">MEJ-064 · Admin Media</div>
+        <div class="mej-title">Controles de video y audio: posición y funcionalidad</div>
+        <div class="mej-desc">Los controles deben estar en la barra inferior por estándar. Se requiere barra de progreso con scrubbing, volumen ajustable, y eliminar PIP y Google Cast.</div>
+        <span class="mej-badge badge-vt">Validación Técnica</span>
+      </div>
+      <div class="mej-card green">
+        <div class="mej-id">MEJ-065 · Admin Media</div>
+        <div class="mej-title">Colores de botones de audio visibles en modo claro y oscuro</div>
+        <div class="mej-desc">Los botones del reproductor de audio no son visibles cuando el LMS está en modo claro. Deben ser legibles en ambos temas, en Cursos y en el Gestor Multimedia.</div>
+        <span class="mej-badge badge-vt">Validación Técnica</span>
+      </div>
+      <div class="mej-card purple">
+        <div class="mej-id">MEJ-066 · Admin Media</div>
+        <div class="mej-title">Agregar imagen de portada en el reproductor de audio</div>
+        <div class="mej-desc">Los archivos de audio deben poder mostrar una imagen de portada, tanto en la vista previa del Gestor Multimedia como en el reproductor dentro del curso.</div>
+        <span class="mej-badge badge-vt">Validación Técnica</span>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <p><strong>Conclusión de la investigación:</strong> Las tres mejoras son técnicamente viables con la versión actual de Vidstack (<code>@vidstack/react v1.12+</code>) que ya está en el proyecto. No se requiere migrar a otra librería ni agregar dependencias nuevas. El esfuerzo principal es de configuración de props y ajuste de CSS.</p>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 03 -->
+  <div class="section" id="que-es-vidstack">
+    <div class="section-label">03 — ¿Qué es Vidstack?</div>
+    <h2>La librería que ya usamos, usada correctamente</h2>
+    <p>Vidstack es la librería de reproducción de media que el proyecto adoptó según el <strong>ADR-SYS-022</strong>. Es una solución moderna y accesible para construir reproductores de video y audio en la web, compatible con React y otros frameworks. Lo más importante para este contexto: ya está instalada en el proyecto y el equipo tiene experiencia con ella.</p>
+    <p>Vidstack ofrece tres formas de trabajar con el reproductor. En orden de menor a mayor control:</p>
+
+    <h3>Opción A — DefaultVideoLayout (la que usaremos)</h3>
+    <p>Es el layout listo para producción que Vidstack provee. Funciona pasando props de configuración para activar o desactivar funcionalidades. Es la opción correcta para las tres mejoras porque <strong>evita reescribir lógica de reproducción</strong> y solo requiere ajustar qué controles se muestran y cómo se estilizan.</p>
+
+    <h3>Opción B — PlyrLayout</h3>
+    <p>Un layout alternativo basado en el diseño de Plyr.js, conocido por su estética limpia. Podría usarse en el futuro si el cliente solicita un cambio más radical de apariencia, pero no es necesario para las mejoras actuales.</p>
+
+    <h3>Opción C — Layout personalizado desde cero</h3>
+    <p>Construir el reproductor componente por componente usando los primitivos de Vidstack (<code>Controls.Root</code>, <code>TimeSlider</code>, <code>VolumeSlider</code>, etc.). Esta opción da control total pero requiere más tiempo de desarrollo. Se recomienda solo si las opciones A o B no cubren un requerimiento específico en el futuro.</p>
+
+    <div class="callout tip">
+      <p><strong>¿Por qué es importante entender esto?</strong> Porque la tentación inicial puede ser ir directamente a la Opción C para "tener control total". Pero para las tres mejoras documentadas aquí, la Opción A es más rápida, más segura (menos superficie de bugs), y más fácil de mantener cuando Vidstack libere actualizaciones.</p>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 04 -->
+  <div class="section" id="implementacion">
+    <div class="section-label">04 — Implementación paso a paso</div>
+    <h2>Guía de implementación para producción</h2>
+
+    <div class="callout warning">
+      <p><strong>Antes de empezar:</strong> verificar que la versión instalada sea <code>@vidstack/react@^1.12.0</code> o superior corriendo <code>npm list @vidstack/react</code>. Las props <code>noGoogleCast</code> y <code>noPIP</code> están disponibles desde la v1.11.</p>
+    </div>
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Verificar la versión de Vidstack instalada</div>
+          <div class="step-desc">Antes de modificar cualquier componente, confirmar que la versión instalada soporta las props que vamos a usar. Si la versión es inferior a <code>1.11.0</code>, actualizar primero en un branch separado y correr las pruebas de regresión del reproductor existente.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">terminal</span>
+            </div>
+            <pre><span class="t-cmt"># Verificar versión actual</span>
+npm list @vidstack/react
+
+<span class="t-cmt"># Si necesita actualizar:</span>
+npm install @vidstack/react@latest
+
+<span class="t-cmt"># Verificar que los estilos base también estén importados</span>
+<span class="t-cmt"># Buscar en el entry point o en el componente del player:</span>
+<span class="t-cmt"># import '@vidstack/react/player/styles/base.css';</span>
+<span class="t-cmt"># import '@vidstack/react/player/styles/default/theme.css';</span>
+<span class="t-cmt"># import '@vidstack/react/player/styles/default/layouts/video.css';</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Localizar el componente del reproductor actual</div>
+          <div class="step-desc">El reproductor de video/audio del LMS probablemente vive en un componente reutilizable, por ejemplo <code>MediaPlayer.tsx</code> o <code>VideoPlayer.tsx</code> dentro del directorio de componentes de cápsulas o del Gestor Multimedia. Identificar ese archivo es el primer paso antes de hacer cualquier cambio. Buscar usos de <code>&lt;MediaPlayer&gt;</code> o <code>&lt;DefaultVideoLayout&gt;</code> en el codebase.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">terminal</span>
+            </div>
+            <pre><span class="t-cmt"># Buscar todos los archivos que usan Vidstack en el proyecto</span>
+grep -r "vidstack" src/ --include="*.tsx" --include="*.ts" -l
+
+<span class="t-cmt"># O buscar el componente del player directamente</span>
+grep -r "DefaultVideoLayout\|DefaultAudioLayout" src/ -l</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Actualizar los imports necesarios</div>
+          <div class="step-desc">Para usar los layouts default con las nuevas props, es importante importar correctamente tanto el layout de video como el de audio desde las rutas específicas de Vidstack. Un error común es importar desde la ruta genérica en lugar de la ruta del layout, lo que puede causar que las props no sean reconocidas.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">VideoPlayer.tsx (o como se llame en el proyecto)</span>
+            </div>
+            <pre><span class="t-cmt">// ✅ Imports CORRECTOS — usar estas rutas específicas</span>
+<span class="t-kw">import</span> { MediaPlayer, MediaProvider, Poster } <span class="t-kw">from</span> <span class="t-str">'@vidstack/react'</span>;
+<span class="t-kw">import</span> {
+  DefaultVideoLayout,
+  DefaultAudioLayout,
+  defaultLayoutIcons,
+} <span class="t-kw">from</span> <span class="t-str">'@vidstack/react/player/layouts/default'</span>;
+
+<span class="t-cmt">// ❌ Import INCORRECTO — no usar la ruta de plyr para el default layout</span>
+<span class="t-cmt">// import { DefaultVideoLayout } from '@vidstack/react/player/layouts/plyr';</span>
+
+<span class="t-cmt">// Los estilos CSS también deben estar importados (generalmente en el entry o en un CSS global)</span>
+<span class="t-cmt">// import '@vidstack/react/player/styles/base.css';</span>
+<span class="t-cmt">// import '@vidstack/react/player/styles/default/theme.css';</span>
+<span class="t-cmt">// import '@vidstack/react/player/styles/default/layouts/video.css';</span>
+<span class="t-cmt">// import '@vidstack/react/player/styles/default/layouts/audio.css';</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Implementar el reproductor de video con las nuevas props (MEJ-064)</div>
+          <div class="step-desc">Este es el cambio central para MEJ-064. Las props <code>noPIP</code> y <code>noGoogleCast</code> eliminan los controles indeseados. La prop <code>colorScheme="system"</code> resuelve MEJ-065 para video. El componente <code>&lt;Poster&gt;</code> es la base para MEJ-066 cuando se aplique a audio. Nótese que los controles del layout default ya incluyen la barra de progreso (time slider) por defecto — el problema de posicionamiento se resuelve en el Paso 6 con CSS.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">VideoPlayer.tsx</span>
+            </div>
+            <pre><span class="t-kw">interface</span> <span class="t-fn">VideoPlayerProps</span> {
+  src: <span class="t-prop">string</span>;
+  poster?: <span class="t-prop">string</span>; <span class="t-cmt">// URL de imagen de portada (para audio: MEJ-066)</span>
+  title?: <span class="t-prop">string</span>;
+}
+
+<span class="t-kw">export function</span> <span class="t-fn">FUNDESVideoPlayer</span>({ src, poster, title }: <span class="t-fn">VideoPlayerProps</span>) {
+  <span class="t-kw">return</span> (
+    <span class="t-tag">&lt;MediaPlayer</span>
+      <span class="t-attr">src</span>=<span class="t-val">{src}</span>
+      <span class="t-attr">title</span>=<span class="t-val">{title}</span>
+      <span class="t-attr">className</span>=<span class="t-str">"fundes-player"</span>
+      <span class="t-cmt">// Clave para accesibilidad: anunciar cambios a lectores de pantalla</span>
+      <span class="t-attr">aria-label</span>=<span class="t-val">{title ?? 'Reproductor de video'}</span>
+    <span class="t-tag">&gt;</span>
+      <span class="t-tag">&lt;MediaProvider&gt;</span>
+        <span class="t-cmt">{/* Poster: imagen que se muestra antes de reproducir */}</span>
+        {poster &amp;&amp; <span class="t-tag">&lt;Poster</span> <span class="t-attr">src</span>=<span class="t-val">{poster}</span> <span class="t-attr">alt</span>=<span class="t-val">{title ?? ''}</span> <span class="t-tag">/&gt;</span>}
+      <span class="t-tag">&lt;/MediaProvider&gt;</span>
+
+      <span class="t-tag">&lt;DefaultVideoLayout</span>
+        <span class="t-attr">icons</span>=<span class="t-val">{defaultLayoutIcons}</span>
+
+        <span class="t-cmt">// ── MEJ-064: eliminar controles innecesarios ──────────</span>
+        <span class="t-attr">noGoogleCast</span>=<span class="t-val">{true}</span>   <span class="t-cmt">// elimina el botón de Google Cast</span>
+        <span class="t-attr">noPIP</span>=<span class="t-val">{true}</span>          <span class="t-cmt">// elimina Picture-in-Picture</span>
+
+        <span class="t-cmt">// ── MEJ-065: modo claro/oscuro automático ────────────</span>
+        <span class="t-attr">colorScheme</span>=<span class="t-str">"system"</span>  <span class="t-cmt">// usa preferencia del sistema del usuario</span>
+
+        <span class="t-cmt">// Opcional: minSmallLayoutWidth define cuándo activar</span>
+        <span class="t-cmt">// el layout compacto para pantallas pequeñas (en px)</span>
+        <span class="t-attr">smallLayoutBreakpoint</span>=<span class="t-val">{480}</span>
+      <span class="t-tag">/&gt;</span>
+    <span class="t-tag">&lt;/MediaPlayer&gt;</span>
+  );
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Implementar el reproductor de audio con portada (MEJ-065 + MEJ-066)</div>
+          <div class="step-desc">El <code>DefaultAudioLayout</code> de Vidstack tiene soporte nativo para mostrar una imagen tipo "artwork" cuando el media es de tipo audio. Esto es exactamente lo que pide MEJ-066. La prop <code>colorScheme="system"</code> resuelve MEJ-065. A diferencia del layout de video, el de audio no necesita las props de PIP o Cast porque no las muestra de forma predeterminada.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">AudioPlayer.tsx</span>
+            </div>
+            <pre"><span class="t-kw">interface</span> <span class="t-fn">AudioPlayerProps</span> {
+  src: <span class="t-prop">string</span>;
+  coverImage?: <span class="t-prop">string</span>; <span class="t-cmt">// URL de portada — MEJ-066</span>
+  title?: <span class="t-prop">string</span>;
+}
+
+<span class="t-kw">export function</span> <span class="t-fn">FUNDESAudioPlayer</span>({ src, coverImage, title }: <span class="t-fn">AudioPlayerProps</span>) {
+  <span class="t-kw">return</span> (
+    <span class="t-tag">&lt;MediaPlayer</span>
+      <span class="t-attr">src</span>=<span class="t-val">{src}</span>
+      <span class="t-attr">title</span>=<span class="t-val">{title}</span>
+      <span class="t-attr">className</span>=<span class="t-str">"fundes-player"</span>
+      <span class="t-attr">viewType</span>=<span class="t-str">"audio"</span> <span class="t-cmt">// forzar vista de audio, no de video</span>
+    <span class="t-tag">&gt;</span>
+      <span class="t-tag">&lt;MediaProvider&gt;</span>
+        <span class="t-cmt">{/* MEJ-066: la portada del audio usa el mismo componente Poster */}</span>
+        {coverImage &amp;&amp; (
+          <span class="t-tag">&lt;Poster</span>
+            <span class="t-attr">src</span>=<span class="t-val">{coverImage}</span>
+            <span class="t-attr">alt</span>=<span class="t-val">{`Portada de ${title ?? 'audio'}`}</span>
+            <span class="t-attr">className</span>=<span class="t-str">"fundes-audio-poster"</span>
+          <span class="t-tag">/&gt;</span>
+        )}
+      <span class="t-tag">&lt;/MediaProvider&gt;</span>
+
+      <span class="t-tag">&lt;DefaultAudioLayout</span>
+        <span class="t-attr">icons</span>=<span class="t-val">{defaultLayoutIcons}</span>
+        <span class="t-cmt">// MEJ-065: modo de color automático según preferencia del sistema</span>
+        <span class="t-attr">colorScheme</span>=<span class="t-str">"system"</span>
+      <span class="t-tag">/&gt;</span>
+    <span class="t-tag">&lt;/MediaPlayer&gt;</span>
+  );
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Agregar los overrides de CSS para posicionamiento y responsiva (MEJ-064)</div>
+          <div class="step-desc">El problema de que los controles aparecen del lado izquierdo —en lugar de la barra inferior estándar— se resuelve con CSS. Vidstack usa <strong>data attributes</strong> en sus elementos para que el CSS pueda targetearlo de forma estable entre versiones. Este bloque de CSS va en el archivo de estilos globales del proyecto, o en un archivo dedicado al reproductor. No modificar los estilos internos del paquete de node_modules.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">fundes-player.css (agregar al bundle de estilos global)</span>
+            </div>
+            <pre"><span class="t-cmt">/* ── MEJ-064: forzar controles a la barra inferior ─────────────── */</span>
+
+<span class="t-cmt">/* El contenedor principal del player necesita posición relativa */</span>
+<span class="t-prop">.fundes-player</span> {
+  width: <span class="t-num">100%</span>;
+  position: <span class="t-str">relative</span>;
+}
+
+<span class="t-cmt">/* Alinear el grupo de controles al fondo del video */</span>
+<span class="t-prop">.fundes-player</span> [<span class="t-attr">data-media-controls</span>] {
+  display: <span class="t-str">flex</span>;
+  flex-direction: <span class="t-str">column</span>;
+  justify-content: <span class="t-str">flex-end</span>; <span class="t-cmt">/* empuja los controles al fondo */</span>
+  align-items: <span class="t-str">stretch</span>;
+}
+
+<span class="t-cmt">/* Barra de progreso siempre visible (no solo al hacer hover) */</span>
+<span class="t-prop">.fundes-player</span> .vds-time-slider {
+  opacity: <span class="t-num">1</span> !important;
+  visibility: <span class="t-str">visible</span> !important;
+}
+
+<span class="t-cmt">/* Gradiente en la barra inferior para mejorar legibilidad */</span>
+<span class="t-prop">.fundes-player</span> [<span class="t-attr">data-media-controls-group</span>] {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.80) 0%,
+    rgba(0, 0, 0, 0.0) 100%
+  );
+  padding: 20px 12px 10px;
+}
+
+
+<span class="t-cmt">/* ── MEJ-064: responsiva — zonas de toque más grandes en móvil ─── */</span>
+
+<span class="t-cmt">/* En pantallas pequeñas, botones de al menos 44x44px (estándar WCAG) */</span>
+<span class="t-prop">@media (max-width: 480px)</span> {
+  <span class="t-prop">.fundes-player</span> .vds-button {
+    width: <span class="t-num">44px</span>;
+    height: <span class="t-num">44px</span>;
+  }
+  <span class="t-prop">.fundes-player</span> .vds-time-slider {
+    height: <span class="t-num">6px</span>; <span class="t-cmt">/* barra más gruesa en táctil */</span>
+  }
+}
+
+
+<span class="t-cmt">/* ── MEJ-066: portada de audio — tamaño y estilo ──────────────── */</span>
+
+<span class="t-prop">.fundes-audio-poster</span> {
+  width: <span class="t-num">80px</span>;
+  height: <span class="t-num">80px</span>;
+  border-radius: <span class="t-num">8px</span>;
+  object-fit: <span class="t-str">cover</span>;
+  flex-shrink: <span class="t-num">0</span>;
+}
+
+<span class="t-cmt">/* Fallback cuando no hay portada: mostrar ícono de audio */</span>
+<span class="t-prop">.fundes-player[data-view-type="audio"]</span> .vds-poster:empty {
+  background: var(--color-surface-elevated);
+  border-radius: <span class="t-num">8px</span>;
+  display: <span class="t-str">flex</span>;
+  align-items: <span class="t-str">center</span>;
+  justify-content: <span class="t-str">center</span>;
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="step-title">Actualizar el backend para soportar el campo de portada en audio</div>
+          <div class="step-desc">MEJ-066 no es solo un cambio frontend. Para que un audio tenga portada, el modelo de datos del media asset necesita un campo <code>coverImage</code> (o equivalente) que almacene la URL de la imagen. Si este campo aún no existe en el schema de la base de datos ni en el endpoint del Gestor Multimedia, es necesario agregarlo. Coordinar con el equipo de backend para este punto antes de implementar el frontend.</div>
+          <div class="code-wrap">
+            <div class="code-header">
+              <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+              <span class="code-filename">Cambios sugeridos en el modelo de datos (pseudo-schema)</span>
+            </div>
+            <pre><span class="t-cmt">-- Agregar columna coverImageUrl al modelo de media assets</span>
+<span class="t-cmt">-- (adaptar según el ORM / base de datos que usa el proyecto)</span>
+
+<span class="t-kw">ALTER TABLE</span> media_assets
+  <span class="t-kw">ADD COLUMN</span> cover_image_url <span class="t-prop">VARCHAR(500)</span> <span class="t-kw">NULL</span>;
+
+<span class="t-cmt">-- En el endpoint GET /api/media/:id, incluir este campo en la respuesta:</span>
+<span class="t-cmt">// {</span>
+<span class="t-cmt">//   "id": "uuid",</span>
+<span class="t-cmt">//   "title": "Módulo 3 — Intro a finanzas",</span>
+<span class="t-cmt">//   "mimeType": "audio/mpeg",</span>
+<span class="t-cmt">//   "src": "https://...",</span>
+<span class="t-cmt">//   "coverImageUrl": "https://..." ← nuevo campo</span>
+<span class="t-cmt">// }</span>
+
+<span class="t-cmt">-- En el endpoint PUT /api/media/:id (editar), aceptar coverImageUrl</span>
+<span class="t-cmt">-- En el Gestor Multimedia (admin), agregar campo de subida de portada</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <div class="step-title">Verificar en los dispositivos objetivo antes de hacer merge</div>
+          <div class="step-desc">Antes de aprobar el PR para producción, probar manualmente en los siguientes contextos: Chrome desktop en modo claro y oscuro, Safari en iOS (iPhone SE y iPhone 14), Chrome en Android, y el LMS en pantalla completa con el sidebar colapsado. El punto específico que hay que validar es que la barra de controles queda en la parte inferior y no se superpone al contenido del video de manera incorrecta.</div>
+          <div class="callout success">
+            <p><strong>Criterio de aceptación mínimo:</strong> Los controles están en la barra inferior. La barra de progreso es visible sin necesidad de hacer hover. No aparecen los botones de PIP ni Google Cast. Los botones de audio son visibles en modo claro y oscuro. Los audios con portada la muestran correctamente.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECCIÓN 05 -->
+  <div class="section" id="cambios-detallados">
+    <div class="section-label">05 — Cambios detallados</div>
+    <h2>Qué se agrega, modifica o elimina</h2>
+    <p>El siguiente resumen sirve como checklist para el developer asignado y como referencia para la sesión de QA posterior a la implementación.</p>
+
+    <div class="change-list">
+      <div class="change-item"><span class="ch-badge ch-rm">ELIMINAR</span><div><strong>Botón de PIP (Picture-in-Picture)</strong> — agregar prop <code>noPIP={true}</code> en <code>DefaultVideoLayout</code>. El cliente explícitamente no lo quiere y genera confusión en el contexto del LMS.</div></div>
+      <div class="change-item"><span class="ch-badge ch-rm">ELIMINAR</span><div><strong>Botón de Google Cast</strong> — agregar prop <code>noGoogleCast={true}</code> en <code>DefaultVideoLayout</code>. Es irrelevante para la experiencia de aprendizaje en plataforma web.</div></div>
+      <div class="change-item"><span class="ch-badge ch-mod">MOVER</span><div><strong>Posición de los controles</strong> — con CSS override, mover de la posición actual (izquierda / flotante) a la barra inferior estándar, con gradiente semitransparente para asegurar contraste sobre cualquier video.</div></div>
+      <div class="change-item"><span class="ch-badge ch-add">AGREGAR</span><div><strong>Barra de progreso visible permanentemente</strong> — el time slider de Vidstack ya existe en el layout default, pero puede estar oculto sin hover. Con el override de CSS se fuerza <code>opacity: 1</code> para que siempre esté visible, tal como ya funciona en el reproductor de podcast.</div></div>
+      <div class="change-item"><span class="ch-badge ch-mod">AJUSTAR</span><div><strong>Colores de audio en modo claro y oscuro (MEJ-065)</strong> — con la prop <code>colorScheme="system"</code> en <code>DefaultAudioLayout</code>, Vidstack adapta automáticamente los colores de los botones y la barra de progreso al tema activo del usuario.</div></div>
+      <div class="change-item"><span class="ch-badge ch-add">AGREGAR</span><div><strong>Imagen de portada en audio (MEJ-066)</strong> — con el componente <code>&lt;Poster&gt;</code> dentro de <code>&lt;MediaProvider&gt;</code>, y el campo <code>coverImageUrl</code> nuevo en el modelo de datos. Requiere cambio en backend y en la pantalla de edición del Gestor Multimedia.</div></div>
+      <div class="change-item"><span class="ch-badge ch-a11y">ACCESIBILIDAD</span><div><strong>Zonas de toque en móvil</strong> — los botones del reproductor deben tener al menos 44×44px en pantallas táctiles, siguiendo el estándar WCAG 2.5.5. Se implementa con el media query en el archivo CSS.</div></div>
+      <div class="change-item"><span class="ch-badge ch-a11y">ACCESIBILIDAD</span><div><strong>Navegación por teclado</strong> — Vidstack incluye por defecto soporte completo de teclado: <code>Space</code> para play/pausa, flechas <code>←</code> <code>→</code> para retroceder/avanzar 10 segundos, <code>M</code> para mute, y <code>F</code> para pantalla completa. Verificar que estos atajos funcionen después de los cambios de CSS.</div></div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 06 -->
+  <div class="section" id="accesibilidad">
+    <div class="section-label">06 — Accesibilidad y móviles</div>
+    <h2>Por qué los controles abajo no son solo estética</h2>
+    <p>Para los usuarios del LMS de FUNDES que utilizan tecnología de asistencia —lectores de pantalla, teclados, switches de acceso— o que acceden desde dispositivos móviles con pantallas pequeñas, la posición y el tamaño de los controles tiene un impacto funcional directo, no solo visual.</p>
+
+    <h3>Usuarios con movilidad reducida</h3>
+    <p>Cuando los controles están superpuestos al centro del video, las zonas de toque son pequeñas y difíciles de alcanzar con precisión. La barra inferior fija proporciona un área predecible y más grande. El estándar WCAG 2.5.5 (Target Size) recomienda un mínimo de 44×44 CSS píxeles para elementos interactivos en pantallas táctiles, que es lo que se implementa con el media query del Paso 6.</p>
+
+    <h3>Usuarios de lectores de pantalla</h3>
+    <p>Vidstack asigna automáticamente roles ARIA correctos a todos sus controles: <code>role="slider"</code> para la barra de progreso y volumen, <code>role="button"</code> para los controles de reproducción, y <code>aria-label</code> descriptivos. Al usar el <code>DefaultVideoLayout</code> en lugar de un reproductor nativo o un reproductor personalizado sin accesibilidad, estos atributos ya vienen incluidos sin esfuerzo adicional.</p>
+
+    <h3>Dispositivos móviles y el sidebar del curso</h3>
+    <p>Vidstack usa <strong>Container Queries</strong> internamente para adaptar el layout. Esto significa que el reproductor responde al tamaño de su contenedor, no al tamaño del viewport completo. En el LMS, donde el video está embebido dentro de una página que también tiene sidebar, encabezado y otros elementos, esto es fundamental: cuando el sidebar se colapsa, el video se expande y los controles se redistribuyen automáticamente; cuando la pantalla es un teléfono, el layout se compacta sin necesidad de queries adicionales.</p>
+  </div>
+
+  <!-- SECCIÓN 07 -->
+  <div class="section" id="qa">
+    <div class="section-label">07 — Casos de prueba relacionados</div>
+    <h2>QA a ejecutar después de la implementación</h2>
+    <p>Los siguientes casos de prueba de la especificación <code>TC_MEDIA_PREVIEW</code> son directamente relevantes para verificar que las tres mejoras se implementaron correctamente. Deben ejecutarse en el ambiente de QA antes de aprobar el merge a producción.</p>
+
+    <table class="qa-table">
+      <thead>
+        <tr>
+          <th>TC / PW</th>
+          <th>Descripción</th>
+          <th>MEJ relacionada</th>
+          <th>Criterio de aceptación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>TC-3.9.07 / PW-110</td>
+          <td>Modal renderiza contenido según mimeType</td>
+          <td>MEJ-064</td>
+          <td><strong>Video:</strong> usa <code>&lt;media-player&gt;</code> con layout inferior. <strong>Audio:</strong> usa <code>&lt;media-player&gt;</code> con layout de audio.</td>
+        </tr>
+        <tr>
+          <td>TC-3.9.09 / PW-112</td>
+          <td>Thumbnail con role button (A11y)</td>
+          <td>MEJ-064, Accesibilidad</td>
+          <td>El reproductor mantiene <code>role="button"</code>, <code>tabindex="0"</code> y <code>aria-label</code> después de los cambios de CSS.</td>
+        </tr>
+        <tr>
+          <td>Manual — nuevo</td>
+          <td>Controles en barra inferior</td>
+          <td>MEJ-064</td>
+          <td>Los controles de play, volumen, barra de progreso y pantalla completa aparecen en la barra inferior. No se muestran PIP ni Google Cast.</td>
+        </tr>
+        <tr>
+          <td>Manual — nuevo</td>
+          <td>Colores en modo claro y oscuro</td>
+          <td>MEJ-065</td>
+          <td>Los botones del reproductor de audio son visibles (contraste adecuado) tanto en el tema claro como en el oscuro del LMS.</td>
+        </tr>
+        <tr>
+          <td>Manual — nuevo</td>
+          <td>Portada de audio se muestra</td>
+          <td>MEJ-066</td>
+          <td>Cuando un audio tiene <code>coverImageUrl</code> asignado, la imagen aparece en el reproductor. Cuando no tiene portada, se muestra el fallback correctamente.</td>
+        </tr>
+        <tr>
+          <td>Manual — nuevo</td>
+          <td>Barra de progreso visible sin hover</td>
+          <td>MEJ-064</td>
+          <td>La barra de progreso es visible en todo momento, sin necesidad de pasar el cursor sobre el video.</td>
+        </tr>
+        <tr>
+          <td>Manual — nuevo</td>
+          <td>Responsiva en iOS y Android</td>
+          <td>MEJ-064</td>
+          <td>En iPhone SE (375px) y en Android de gama media, los controles son táctiles, están en la posición correcta y las zonas de toque tienen al menos 44px.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECCIÓN 08 -->
+  <div class="section" id="referencias">
+    <div class="section-label">08 — Referencias y recursos</div>
+    <h2>Documentación de Vidstack</h2>
+    <p>Los siguientes enlaces son los recursos directos de Vidstack relevantes para esta implementación. Se recomienda que el developer asignado los revise antes de comenzar, especialmente la documentación del Default Layout y la sección de diseño responsivo.</p>
+
+    <div class="change-list">
+      <div class="change-item"><span class="ch-badge ch-add" style="white-space:nowrap;">DOC</span><div><strong>Default Layout (video y audio)</strong> — <code>vidstack.io/docs/player/components/layouts/default-layout</code> — Props disponibles, personalización con slots, variables CSS.</div></div>
+      <div class="change-item"><span class="ch-badge ch-add" style="white-space:nowrap;">DOC</span><div><strong>Diseño responsivo</strong> — <code>vidstack.io/docs/player/styling/responsive-design</code> — Cómo funcionan los Container Queries internos y cómo crear overrides.</div></div>
+      <div class="change-item"><span class="ch-badge ch-add" style="white-space:nowrap;">DOC</span><div><strong>Controles (Components › Display › Controls)</strong> — <code>vidstack.io/docs/player/components/display/controls</code> — Para futuras personalizaciones más avanzadas con layout custom.</div></div>
+      <div class="change-item"><span class="ch-badge ch-add" style="white-space:nowrap;">DOC</span><div><strong>Accessibility en Vidstack</strong> — <code>vidstack.io/docs/player/overview</code> — El overview documenta los roles ARIA y atajos de teclado incluidos por defecto.</div></div>
+      <div class="change-item"><span class="ch-badge ch-mod" style="white-space:nowrap;">ADR</span><div><strong>ADR-SYS-022</strong> — Vidstack Unified Player + Playback Analytics — El ADR original que aprobó el uso de Vidstack en el proyecto. Consultar para contexto de decisiones de arquitectura.</div></div>
+      <div class="change-item"><span class="ch-badge ch-mod" style="white-space:nowrap;">LINK</span><div><strong>Admin Media en QA</strong> — <code>qa.lms.fundes.org/admin/media</code> — Ambiente de pruebas donde se puede verificar el estado actual del reproductor y validar los cambios.</div></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <span>servicio.lms.ai · IT-PRO MX · 2026</span>
+    <span>MEJ-064 · MEJ-065 · MEJ-066 · Validación Técnica</span>
+  </div>
+
+</div>
+</body>
+</html>
