@@ -1,0 +1,1708 @@
+# Bug Tracker — servicio.lms.ai
+
+> Fuente unica de verdad para todos los bugs del sistema.
+> Migrado desde Trello el 25-Mar-2026.
+> Formato: cada bug tiene tabla de metadata + descripcion + pasos + causa probable.
+> Numeracion: `PRD_BUG-NNN` para produccion, `BUG-NNN` para QA — nunca se reutilizan.
+
+## Nomenclatura y Convenciones
+
+| Tipo | Formato | Ejemplo |
+|------|---------|---------|
+| Producción | `PRD_BUG-NNN` | PRD_BUG-001 |
+| QA | `BUG-NNN_{titulo}.md` | BUG-033_reset-progress.md |
+
+**Template:** `SHARED/TEMPLATES/bug-report.md.template`
+
+**Severidades:** Crítico · Alto · Medio · Bajo
+
+---
+
+## Producción
+
+| # | Título | Severidad | Componente | Estado | Fecha |
+|---|--------|-----------|------------|--------|-------|
+| PRD_BUG-001 | Admin CMS — Selector de Bloque vacío al crear curso | Crítico | Backend LMS + Frontend | Cerrado | 2026-04-01 |
+| PRD_BUG-002 | Vista Usuario — Error en "Cómo Inicio" e "Historial" + redirect incorrecto | Alto | Frontend + Backend LMS | Cerrado | 2026-04-01 |
+
+---
+
+### PRD_BUG-001: Admin CMS — Selector de Bloque vacío al crear curso
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Crítico |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend — blocks module / Frontend — Admin CMS |
+| **Ambiente** | Producción (`https://lms.fundes.org`) |
+| **Rol** | ADMIN |
+| **Reportado** | 2026-04-01 |
+
+**Descripción:** Al intentar crear un curso desde el panel Admin CMS, el selector de Bloque aparece vacío — sin opciones disponibles. El formulario requiere asignar un Bloque (primer nivel de la taxonomía `Bloque > Curso > Módulo > Lección`), por lo que sin este campo no es posible crear ningún curso. La creación de contenido quedó completamente bloqueada en producción.
+
+**Pasos para reproducir:**
+1. Login como ADMIN en `https://lms.fundes.org`
+2. Navegar a Admin CMS → Cursos → Crear Curso
+3. Observar que el selector de Bloque aparece vacío, sin opciones
+
+**Esperado:** El selector lista todos los bloques activos (`archivedAt IS NULL`) disponibles en producción.
+**Actual:** Dropdown vacío, sin mensaje de error visible.
+
+**Causa probable:** BD de producción sin bloques creados — el endpoint `GET /api/v1/lms/blocks` retornaba `[]`. Causa raíz: ausencia de datos semilla, no bug de código. Causas alternativas descartadas: bloques archivados (`archivedAt != null`), error 5xx silenciado en frontend.
+
+**Diagnóstico aplicado:**
+1. `GET https://lms.fundes.org/api/v1/lms/blocks` con token Admin
+2. Query en BD PRD: `SELECT id, name, "archivedAt", deleted_at FROM lms."bloques" WHERE deleted_at IS NULL;`
+
+**Referencias:** ADR-LMS-002 (tipos de bloque), ADR-LMS-003 (soft-archive), ADR-SYS-023 (taxonomía)
+
+---
+
+### PRD_BUG-002: Vista Usuario — Error en "Cómo Inicio" e "Historial" + redirect incorrecto
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend — error boundary / Backend — endpoints de usuario |
+| **Ambiente** | Producción (`https://lms.fundes.org`) |
+| **Rol** | ADMIN accediendo a vista de usuario |
+| **Reportado** | 2026-04-01 |
+
+**Descripción:** En la vista de usuario (accedida como Admin), las secciones "Cómo Inicio" e "Historial" mostraban pantalla de error genérico. El botón "Recargar" refrescaba sin resolver. El botón "Ir al Inicio" redirigía a Contenido del panel Admin en lugar del home de usuario. Dos issues independientes: error de datos/API y redirect incorrecto del error boundary.
+
+**Pasos para reproducir:**
+1. Login como ADMIN en `https://lms.fundes.org`
+2. Navegar a vista de usuario → sección "Cómo Inicio" o "Historial"
+3. Observar pantalla de error con botones "Recargar" e "Ir al Inicio"
+4. Presionar "Ir al Inicio" — redirige a Contenido del panel Admin
+
+**Esperado:** Secciones cargan correctamente. En caso de error, "Ir al Inicio" redirige al home de usuario.
+**Actual:** Error genérico en ambas secciones. "Ir al Inicio" apunta a panel Admin.
+
+**Causa probable:**
+1. Usuario Admin sin diagnóstico completado — "Cómo Inicio" depende del assessment; un Admin que solo usa el CMS nunca lo completa, el backend retorna 404/vacío y la UI cae en el error boundary.
+2. Bug de routing en error boundary — el componente resuelve la ruta "Ir al Inicio" con una ruta fija de Admin en lugar de resolverla dinámicamente por rol.
+
+**Issues separados a corregir:**
+
+| # | Issue | Tipo |
+|---|-------|------|
+| 1 | "Cómo Inicio" e "Historial" retornan error | Backend / datos |
+| 2 | Botón "Ir al Inicio" del error boundary redirige a panel Admin | Frontend |
+
+---
+---
+
+## QA
+
+## Resumen
+
+| Total | Abiertos | En Progreso | Cerrados | Diferidos |
+|-------|----------|-------------|----------|-----------|
+| 53 | 5 | 0 | 48 | 0 |
+
+> Ultima revalidacion: 02-Abr-2026 — MEJ-019, 037, 041, 046, 072, 075..078 removidas del tracker (ver MEJORAS.md)
+
+## Indice
+
+| ID | Titulo | Sev | Estado | Producto | Fecha |
+|----|--------|-----|--------|----------|-------|
+| BUG-001 | Docker build LMS falla — adduser Alpine exit 1 | Medio | Cerrado | Infra | 2026-02-17 |
+| BUG-002 | TypeScript error Assessment frontend ForgotPasswordPage.tsx:36 | Medio | Cerrado | Assessment | 2026-02-17 |
+| BUG-003 | seed-all.sh path incorrecto — falso positivo | Bajo | Cerrado | Infra | 2026-02-17 |
+| BUG-004 | Deseleccion/Eliminacion de Cursos Prerrequisitos no persiste al guardar | Alto | Cerrado | LMS | 2026-03-12 |
+| BUG-005 | Pagina en blanco despues del registro | Alto | Cerrado | LMS | 2026-03-12 |
+| BUG-006 | PDF de Assessment no descargable | Alto | Cerrado | Assessment | 2026-03-12 |
+| BUG-007 | Boton Historial despliega misma sidebar | Medio | Cerrado | Assessment | 2026-03-12 |
+| BUG-008 | Sesion no persiste despues de logout | Critico | Cerrado | LMS | 2026-03-12 |
+| BUG-009 | Registro crea cuentas duplicadas con mismas credenciales | Critico | Cerrado | LMS | 2026-03-12 |
+| BUG-010 | Flujo de Employee completamente bloqueado | Critico | Cerrado | LMS | 2026-03-12 |
+| BUG-011 | Login form se reinicia sin mostrar error en credenciales invalidas | Alto | Cerrado | LMS | 2026-03-12 |
+| BUG-012 | Copy Code button no funciona | Medio | Cerrado | LMS | 2026-03-12 |
+| BUG-013 | Codigo de empresa solo aparece despues de iniciar diagnostico | Alto | Cerrado | LMS | 2026-03-13 |
+| BUG-014 | PDF y Plan de Aprendizaje no avanzan | Alto | Cerrado (→ BUG-006) | Assessment | 2026-03-13 |
+| BUG-015 | Quitar "gratuito" del CTA en Landing | Bajo | Cerrado | LMS | 2026-03-14 |
+| BUG-016 | Corregir ortografia "Unite" a "Unete" en registro | Alto | Cerrado | LMS | 2026-03-14 |
+| BUG-017 | Reemplazar "Certificados" por "Constancias" en toda la plataforma | Alto | Cerrado | LMS | 2026-03-14 |
+| BUG-018 | Cambiar pregunta empresa a "Perteneces a una empresa o negocio?" | Medio | Cerrado | LMS | 2026-03-14 |
+| BUG-020 | Validar campos de empresa con Jazmin y Diana | Alto | Cerrado (→ MEJ-019) | LMS | 2026-03-14 |
+| BUG-021 | Quitar estilo error (rojo) de respuestas "No" en Assessment | Alto | Cerrado | Assessment | 2026-03-14 |
+| BUG-022 | Rate limiting en login no funciona | Critico | Cerrado | LMS | 2026-03-17 |
+| BUG-023 | Recuperacion de contrasena — email no llega | Alto | Cerrado | LMS | 2026-03-17 |
+| BUG-024 | Error al guardar configuracion de usuarios desde Admin | Alto | Cerrado | LMS | 2026-03-17 |
+| BUG-025 | Capsula de video Vimeo — URL firmada no se genera | Alto | Cerrado | LMS | 2026-03-17 |
+| BUG-026 | Video URL de YouTube genera error en capsula de modulo | Medio | Cerrado | LMS | 2026-03-17 |
+| BUG-027 | Email de bienvenida no llega — AWS SES sin validar en QA | Alto | Cerrado | Infra | 2026-03-17 |
+| BUG-028 | Landing page — "Ver Cursos" bloqueado para visitantes | Medio | Cerrado | LMS | 2026-03-17 |
+| BUG-029 | OTP email no llega — usuario se registra sin validar codigo | Alto | Cerrado | Infra | 2026-03-22 |
+| BUG-030 | Ver Resultados del Diagnostico muestra pagina en blanco | Alto | Cerrado | Assessment | 2026-03-22 |
+| BUG-031 | Barra de progreso no se actualiza al marcar leccion completada | Medio | Cerrado | LMS | 2026-03-22 |
+| BUG-032 | Gestor multimedia no permite subir Videos, PDF ni Audios | Alto | Cerrado | Infra | 2026-03-22 |
+| BUG-033 | reset-progress HTTP 500 — UUID cast en SQL raw | Alto | Cerrado | LMS | 2026-03-23 |
+| BUG-034 | PATCH /notifications/preferences/:type retorna error en QA | Medio | Cerrado | LMS | 2026-03-23 |
+| BUG-035 | Filtros del catalogo no reflejan cambios en UI | Medio | Cerrado | LMS | 2026-03-23 |
+| BUG-036 | Score-gating — catalogo completo no filtra por diagnosis score | Alto | Cerrado | LMS | 2026-03-23 |
+| BUG-038 | Faltan acentos en paginas Admin (Cursos, Multimedia, Preguntas) | Bajo | Cerrado | LMS | 2026-03-23 |
+| BUG-039 | Assessment InitPage no redirige a LMS login | Alto | Cerrado | Assessment | 2026-03-24 |
+| BUG-040 | Registro de Owner no envia POST /auth/register | Alto | Cerrado | LMS | 2026-03-24 |
+| BUG-042 | Cursos de Sensibilizacion no todos visibles en catalogo como User | Alto | Cerrado | LMS | 2026-03-26 |
+| BUG-043 | Video no carga en algunas versiones moviles, sobre todo en Android | Alto | Abierto | LMS | 2026-03-26 |
+| BUG-044 | PDF en version movil se descarga automaticamente en vez de preview | Medio | Abierto | LMS | 2026-03-26 |
+| BUG-045 | Resultados Assessment no indica nivel de madurez (diagnosisResult:inicial) | Alto | Cerrado | Assessment | 2026-03-27 |
+| BUG-047 | IA genera pregunta de diagnostico con texto incorrecto | Alto | Cerrado | Assessment | 2026-03-27 |
+| BUG-048 | Respuesta "Error" se repite en respuestas de Assessment | Alto | Cerrado | Assessment | 2026-03-27 |
+| BUG-049 | Ultima pregunta YES/NO — respuesta no es visible | Alto | Cerrado | Assessment | 2026-03-27 |
+| BUG-050 | Barra de busqueda del catalogo no se limpia al borrar el texto | Medio | Cerrado | LMS | 2026-03-27 |
+| BUG-051 | Banner de Iniciar Diagnostico persiste en Mis Cursos tras completar diagnostico | Medio | Cerrado | LMS | 2026-03-29 |
+| BUG-070 | Al finalizar Assessment no muestra resultados — redirige a Como Inicio | Alto | Cerrado | Assessment | 2026-03-29 |
+| BUG-071 | Banner de inscripcion no muestra mensaje especifico al intentar inscribirse a curso bloqueado | Medio | Cerrado (→ MEJ-076) | LMS | 2026-03-30 |
+| BUG-073 | Diagnostico no persiste avance — "Continuar" regresa a pregunta 1 y Owner no puede iniciar diagnostico | Critico | Cerrado | Assessment + LMS | 2026-03-31 |
+| BUG-074 | Cursos recomendados no filtran por nivel de madurez — aparecen cursos de nivel avanzado en Nivel 1 | Alto | Abierto | LMS | 2026-03-31 |
+| BUG-075 | Dark mode no actualiza pantalla de Resultados del Assessment — requiere refresco manual | Medio | Abierto | Assessment + LMS | 2026-04-08 |
+| BUG-076 | Disparadores — toggle desde lista no persiste, formulario retorna error al guardar sin cambios | Alto | Abierto | LMS Admin | 2026-04-08 |
+
+---
+
+## Bugs
+
+### BUG-001: Docker build LMS falla — adduser Alpine exit 1
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | Infra |
+| **Componente** | devops.lms.fundes / code.lms.fundes — Dockerfile |
+| **Ambiente** | CI (GitHub Actions) |
+| **Reportado** | 2026-02-17 |
+| **Sesion QA** | infra-smoke.2026-02-17.1810 |
+
+**Descripcion:** El pipeline de GitHub Actions para code.lms.fundes falla en el paso de Docker build. El comando `adduser` en el Dockerfile de Alpine sale con exit code 1. Alpine usa sintaxis diferente a Debian/Ubuntu (`adduser -D -u 1001 appuser` sin `--uid`).
+
+**Pasos para reproducir:**
+1. Push a code.lms.fundes que trigger CI
+2. Observar que el Docker build falla en el paso `adduser`
+
+**Esperado:** Docker build completa exitosamente.
+**Actual:** Exit code 1 en `adduser`.
+
+**Causa probable:** Sintaxis incorrecta de `adduser` para Alpine Linux, o conflicto de UID existente en imagen base.
+
+**Notas:** Resuelto durante migracion a CodeBuild con imagenes base corregidas.
+
+---
+
+### BUG-002: TypeScript error Assessment frontend ForgotPasswordPage.tsx:36
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | code.assessment.fundes/frontend — ForgotPasswordPage.tsx:36 |
+| **Ambiente** | CI (GitHub Actions) |
+| **Reportado** | 2026-02-17 |
+| **Sesion QA** | infra-smoke.2026-02-17.1810 |
+
+**Descripcion:** El pipeline falla en el build del frontend de Assessment. Error de TypeScript en ForgotPasswordPage.tsx linea 36: se pasa un objeto `{email: string}` donde se espera un `string`.
+
+**Pasos para reproducir:**
+1. Ejecutar `bun run build` o `bunx tsc --noEmit` en code.assessment.fundes/frontend
+2. Observar error en ForgotPasswordPage.tsx:36
+
+**Esperado:** Build sin errores.
+**Actual:** Type mismatch: objeto vs string.
+
+**Causa probable:** `onSubmit={(values) => handleForgotPassword(values)}` deberia ser `handleForgotPassword(values.email)`.
+
+**Notas:** Corregido en commits posteriores.
+
+---
+
+### BUG-003: seed-all.sh path incorrecto — falso positivo
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Bajo |
+| **Estado** | Cerrado |
+| **Producto** | Infra |
+| **Componente** | data.lms.fundes — scripts/seed-all.sh |
+| **Ambiente** | dev |
+| **Reportado** | 2026-02-17 |
+| **Sesion QA** | infra-smoke.2026-02-17.1810 |
+
+**Descripcion:** El script `seed-all.sh` calcula `SERVICE_ROOT` un nivel arriba del correcto. Busca backends en `/Desktop/Fundes/code.lms.fundes/` en lugar de `/Desktop/Fundes/servicio.lms.ai/code.lms.fundes/`. El script reporta "completado exitosamente" sin ejecutar nada — falso positivo critico.
+
+**Pasos para reproducir:**
+1. Ejecutar `data.lms.fundes/scripts/seed-all.sh`
+2. Observar que reporta exito sin ejecutar seeds
+
+**Esperado:** Seeds ejecutados en ambos schemas.
+**Actual:** Script no encuentra paths y reporta exito silenciosamente.
+
+**Causa probable:** Calculo erroneo de SERVICE_ROOT. Falta validacion de existencia de paths.
+
+**Notas:** Marcado como falso positivo. Scripts de seed refactorizados posteriormente.
+
+---
+
+### BUG-004: Deseleccion/Eliminacion de Cursos Prerrequisitos no persiste al guardar
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - Admin CMS / Cursos |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Reabierto** | 2026-03-29 |
+| **Sesion QA** | Trello (BUGS.md original) |
+
+**Descripcion:** Al crear o editar un curso en el Admin CMS, la seleccion de cursos prerrequisitos funciona, pero la deseleccion no se guarda. Despues de guardar y reabrir el curso, los prerrequisitos aparecen seleccionados.
+
+**Pasos para reproducir:**
+1. Login como ADMIN
+2. Ir a Admin > Cursos > Editar un curso
+3. Seleccionar prerrequisitos y guardar — funciona correctamente
+4. Reabrir el curso y deseleccionar un prerrequisito
+5. Guardar y reabrir el curso
+
+**Esperado:** La deseleccion de prerrequisitos persiste al guardar.
+**Actual:** Los prerrequisitos deseleccionados vuelven a aparecer seleccionados al reabrir el curso.
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo — reabierto el 29-Mar-2026 al identificar que la deseleccion no persiste.
+
+---
+
+### BUG-005: Pagina en blanco despues del registro
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - registro / redirect |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Reabierto** | 2026-03-27 |
+| **Sesion QA** | Trello (BUGS.md original) |
+
+**Descripcion:** Despues de ingresar el codigo de verificacion, la pagina redirige a "Mis Cursos" pero queda en blanco y no carga el contenido. El usuario debe recargar manualmente (Ctrl+R o F5) para ver la pantalla correctamente.
+
+**Pasos para reproducir:**
+1. Registrar usuario nuevo
+2. Ingresar codigo de verificacion recibido por email
+3. Observar que redirige a Mis Cursos pero queda en blanco
+
+**Esperado:** Redireccion a Mis Cursos con contenido cargado sin necesidad de recarga.
+**Actual:** Pagina en blanco — requiere Ctrl+R o F5 para cargar el contenido.
+
+**Notas:** Reportado como cerrado previamente (26-Mar-2026); reabierto el 27-Mar-2026 tras confirmar que el fallo persiste en QA.
+
+**Notas de cierre (26-Mar-2026):** Codigo corregido — redirect post-registro funciona. Journey Owner E2E pasa 29/29.
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo.
+
+---
+
+### BUG-006: PDF de Assessment no descargable
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Backend - reports / Frontend - pagina de resultados diagnostico |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello (BUGS.md original) |
+| **Fusionado** | BUG-014 (27-Mar-2026) |
+
+**Descripcion:** Los botones "Descargar PDF" y "Ver Plan de Aprendizaje" en la pagina de resultados del diagnostico no funcionan. El PDF no descarga nada y el boton de Plan de Aprendizaje no navega a ninguna parte. Relacionado con US-015 (Ver resultado del diagnostico).
+
+**Pasos para reproducir:**
+1. Completar un diagnostico
+2. Ir a resultados
+3. Click en "Descargar PDF" — no descarga nada
+4. Click en "Ver Plan de Aprendizaje" — nada sucede
+
+**Esperado:** PDF descargado con scores por dimension; Plan de aprendizaje mostrado.
+**Actual:** Ambos botones no generan respuesta.
+
+**Causa probable:** El PDF requiere que el assessment-backend (puerto 3002) haya procesado los resultados. Si el reporte no esta generado aun (procesamiento async), los botones apuntan a recursos inexistentes.
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo.
+
+---
+
+### BUG-007: Boton Historial despliega misma sidebar
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - pagina de resultados / historial |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello (BUGS.md original) |
+
+**Descripcion:** Al dar clic en el boton "Historial" para regresar a ver resultados previos, despliega la misma sidebar actual en lugar de navegar a la vista de historial.
+
+**Pasos para reproducir:**
+1. Completar diagnostico
+2. Ver resultados
+3. Click en "Historial"
+
+**Esperado:** Navegacion a vista de historial de diagnosticos.
+**Actual:** Despliega la misma sidebar sin cambiar de vista.
+
+**Notas de cierre (26-Mar-2026):** SidebarLayout navega correctamente a `/history` con DiagnosisHistoryPage independiente.
+
+---
+
+### BUG-008: Sesion no persiste despues de logout
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Critico |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - auth / Frontend - auth state |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** Al cerrar sesion e intentar re-login, la pagina se recarga sin autenticar. El flujo de logout limpia el token del cliente pero deja estado corrupto en el servidor (refresh token no invalidado o cookie mal eliminada).
+
+**Pasos para reproducir:**
+1. Login como usuario existente
+2. Cerrar sesion
+3. Intentar login nuevamente
+4. Observar que la pagina se recarga sin autenticar
+
+**Esperado:** Login exitoso despues de logout.
+**Actual:** Pagina se recarga sin autenticar.
+
+**Causa probable:** El primer intento de registro dejo tokens huerfanos en la base de datos. El segundo Owner si puede abrir y cerrar sesion libremente.
+
+**Notas de cierre (26-Mar-2026):** auth.service implementa `deleteUserSession` + `revokeRefreshToken` + `blacklistAccessToken` en logout. Token invalidation completa via Redis.
+
+---
+
+### BUG-009: Registro crea cuentas duplicadas con mismas credenciales
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Critico |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - auth / registro |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** 2 Owners con las mismas credenciales visibles en el panel admin. El primero no permite acceso, el segundo si. La base de datos deberia rechazar el segundo registro con error de unicidad pero no lo hace.
+
+**Pasos para reproducir:**
+1. Registrar usuario con email X
+2. Registro falla a mitad del proceso
+3. Registrar mismo email X nuevamente
+4. Observar que se crean 2 registros en Admin
+
+**Esperado:** Error de unicidad en el segundo registro.
+**Actual:** Se crean 2 cuentas con el mismo email.
+
+**Causa probable:** Endpoint de registro sin verificacion atomica de unicidad de email antes de insertar, o race condition. Viola integridad de datos.
+
+**Notas de cierre (26-Mar-2026):** `findUnique({ where: { email } })` + `prisma.$transaction()` atomica implementadas en auth.service.
+
+---
+
+### BUG-010: Flujo de Employee completamente bloqueado
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Critico |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - auth / validacion codigo empresa |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** El codigo de Owner/Demo no termina de validar — queda en loading infinito. Employees no pueden registrarse ni hacer login. Esto explica por que no hay employees en el panel admin.
+
+**Pasos para reproducir:**
+1. Obtener codigo de empresa de un Owner
+2. Intentar registrarse como Employee con ese codigo
+3. Observar loading infinito en validacion
+
+**Esperado:** Codigo validado y registro completado.
+**Actual:** Loading infinito, employees no pueden registrarse.
+
+**Causa probable:** Endpoint de validacion de codigo de empresa (`/api/companies/validate`) devuelve error o nunca responde. Frontend sin timeout.
+
+**Notas de cierre (26-Mar-2026):** Company code validation funcional con `findFirst` + OR clause. Journey Employee E2E pasa 30/30.
+
+---
+
+### BUG-011: Login form se reinicia sin mostrar error en credenciales invalidas
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - login page |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** Al ingresar credenciales invalidas, el formulario de login se reinicia silenciosamente sin mostrar ningun mensaje de error. El API responde correctamente con HTTP 401 y body `{"error":{"code":"INVALID_CREDENTIALS","message":"Email or password is incorrect"}}` pero el frontend no procesa ni muestra este error.
+
+**Pasos para reproducir:**
+1. Ir a /login
+2. Ingresar email valido con password incorrecto (o email inexistente)
+3. Click en "Iniciar sesion"
+
+**Esperado:** Mensaje de error "Email o contrasena incorrectos" visible al usuario.
+**Actual:** Formulario se reinicia (campos se limpian) sin feedback.
+
+**Causa probable:** Frontend no procesa la respuesta de error del API.
+
+**Notas de cierre (26-Mar-2026):** LoginPage catch muestra toast de error con duracion 5s. No resetea form.
+
+---
+
+### BUG-012: Copy Code button no funciona
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - dashboard / codigo empresa |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-12 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** El boton de copiar el codigo de empresa al portapapeles no hace nada. El codigo debe ser copiado manualmente.
+
+**Pasos para reproducir:**
+1. Login como Owner
+2. Ir a dashboard donde se muestra codigo de empresa
+3. Click en boton de copiar
+
+**Esperado:** Codigo copiado al portapapeles.
+**Actual:** Nada sucede.
+
+**Causa probable:** `navigator.clipboard.writeText()` requiere HTTPS o localhost. Si el entorno de pruebas usa HTTP, la Clipboard API esta bloqueada silenciosamente por el navegador.
+
+**Notas de cierre (26-Mar-2026):** `navigator.clipboard.writeText()` implementado con label "Copied" 2s. QA usa HTTPS.
+
+---
+
+### BUG-013: Codigo de empresa solo aparece despues de iniciar diagnostico
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - dashboard Owner |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-13 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** El codigo que el Owner debe compartir con sus empleados no es visible al registrarse — aparece hasta que se hace clic en "realizar diagnostico". Esto rompe el flujo de onboarding: el Owner deberia poder compartir el codigo inmediatamente al registrarse.
+
+**Pasos para reproducir:**
+1. Registrar nuevo Owner
+2. Ir al dashboard
+3. Buscar codigo de empresa
+
+**Esperado:** Codigo visible inmediatamente en el dashboard post-registro.
+**Actual:** Codigo solo aparece despues de iniciar diagnostico.
+
+**Causa probable:** Relacionado con ADR-SYS-014 (bifurcacion Owner/Employee). El codigo deberia generarse y mostrarse en el dashboard inmediatamente al completar el registro.
+
+**Notas de cierre (27-Mar-2026):** Cerrado por reclasificacion — verificado en sesion de QA que el codigo aparece correctamente tras completar el registro.
+
+---
+
+### BUG-014: PDF y Plan de Aprendizaje no avanzan
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Backend - reports / Frontend - resultados |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-13 |
+| **Sesion QA** | Trello |
+
+**Descripcion:** Despues de ver resultados del diagnostico, los botones "Descargar PDF" y "Ver Plan de Aprendizaje" no funcionan. Relacionado con US-015 (Ver resultado del diagnostico).
+
+**Pasos para reproducir:**
+1. Completar diagnostico
+2. Ver resultados
+3. Click en "Descargar PDF" o "Ver Plan de Aprendizaje"
+
+**Esperado:** PDF descargado / Plan de aprendizaje mostrado.
+**Actual:** Nada sucede al hacer clic.
+
+**Causa probable:** El PDF requiere que el assessment-backend (puerto 3002) haya procesado los resultados. Si el reporte no esta generado aun (procesamiento async), el boton apunta a un recurso inexistente.
+
+**Notas de cierre (27-Mar-2026):** Fusionado con BUG-006 — ambos bugs comparten componente y causa raiz. Ver BUG-006 para seguimiento.
+
+---
+
+### BUG-015: Quitar "gratuito" del CTA en Landing
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Bajo |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - landing page |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-14 |
+| **Sesion QA** | Trello (Iliana Vazquez, 10-Mar-2026) |
+
+**Descripcion:** El boton CTA dice "Comenzar Diagnostico Gratuito". El cliente solicita eliminar la palabra "gratuito". Cambiar a "Comenzar Diagnostico" o redaccion equivalente.
+
+**Pasos para reproducir:**
+1. Abrir landing page
+
+**Esperado:** CTA sin la palabra "gratuito".
+**Actual:** CTA dice "Comenzar Diagnostico Gratuito".
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo.
+
+---
+
+### BUG-016: Corregir ortografia "Unite" a "Unete" en registro
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - registro paso 1 |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-14 |
+| **Sesion QA** | Trello (Iliana Vazquez, 10-Mar-2026) |
+
+**Descripcion:** El panel derecho del registro dice "Unite a miles de MiPymes..." — debe decir "Unete". Tambien revisar si hay referencias donde deberia decir "evaluacion" en lugar de "diagnostico".
+
+**Pasos para reproducir:**
+1. Ir a /register
+2. Observar texto del panel derecho
+
+**Esperado:** "Unete a miles de MiPymes..."
+**Actual:** "Unite a miles de MiPymes..."
+
+**Notas de cierre (26-Mar-2026):** i18n es.json corregido. E2E block-0 valida "Únete".
+
+---
+
+### BUG-017: Reemplazar "Certificados" por "Constancias" en toda la plataforma
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - global (sidebar, cards, paginas) / Dashboard / Prototipos |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-14 |
+| **Sesion QA** | Trello (Iliana Vazquez, 10-Mar-2026) |
+
+**Descripcion:** FUNDES no entrega certificados sino constancias. Toda referencia a "certificado/certificados" debe cambiarse a "constancia/constancias". Impacta: sidebar menu, cards de curso, pagina de certificados, textos de registro, Dashboard KPIs, prototipos HTML, documentacion.
+
+**Pasos para reproducir:**
+1. Navegar por la plataforma buscando la palabra "certificado"
+
+**Esperado:** Todas las referencias dicen "constancia".
+**Actual:** Multiples instancias de "certificado".
+
+**Causa probable:** Termino original del diseño. Requiere cambio en archivos i18n y posiblemente en labels de backend.
+
+**Notas de cierre (26-Mar-2026):** 30+ refs cambiadas a "Constancia" en es.json. E2E block-0 valida sidebar.
+
+---
+
+### BUG-018: Cambiar pregunta empresa a "Perteneces a una empresa o negocio?"
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - registro paso 2 |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-14 |
+| **Sesion QA** | Trello (Iliana Vazquez, 10-Mar-2026) |
+
+**Descripcion:** La pregunta/dropdown dice "Perteneces a una empresa?" — debe incluir "o negocio" para ser mas inclusivo con micronegocios.
+
+**Pasos para reproducir:**
+1. Ir a /register paso 2
+2. Observar label de la pregunta sobre empresa
+
+**Esperado:** "Perteneces a una empresa o negocio?"
+**Actual:** "Perteneces a una empresa?"
+
+**Notas de cierre (26-Mar-2026):** Texto actualizado en i18n. E2E block-0 valida campo.
+
+---
+
+### BUG-020: Validar campos de empresa con Jazmin y Diana
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Dependencia del cliente |
+| **Ambiente** | N/A |
+| **Reportado** | 2026-03-14 |
+| **Sesion QA** | Trello (Iliana Vazquez, 10-Mar-2026) |
+
+**Descripcion:** Los campos del formulario de datos de empresa se deben cuadrar con Jazmin y Diana antes de implementar cambios. Resultado alimenta MEJ-019.
+
+**Pasos para reproducir:** N/A — dependencia de decision del cliente.
+
+**Esperado:** Definicion final de campos del formulario de empresa.
+**Actual:** Pendiente reunion con stakeholders.
+
+**Notas de cierre (27-Mar-2026):** Fusionado con MEJ-019 — ambos comparten alcance y contexto. Ver MEJ-019 para seguimiento.
+
+---
+
+### BUG-021: Quitar estilo error (rojo) de respuestas "No" en Assessment
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - chat assessment / OptionSelector |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-14 |
+| **Sesion QA** | Trello (Iliana Vazquez, 10-Mar-2026) |
+
+**Descripcion:** Las respuestas "No" en preguntas binarias (BOOLEAN) se muestran con fondo rojo e icono "X", dando la impresion de respuesta incorrecta. El assessment es un diagnostico — no hay respuestas correctas o incorrectas.
+
+**Pasos para reproducir:**
+1. Iniciar diagnostico
+2. Llegar a una pregunta BOOLEAN
+3. Seleccionar "No"
+
+**Esperado:** Estilo visual neutral (sin connotacion de error).
+**Actual:** Fondo rojo e icono "X" (estilo de error).
+
+**Notas de cierre (27-Mar-2026):** Corregido — OptionSelector usa estilo neutro para respuestas "No".
+
+---
+
+### BUG-022: Rate limiting en login no funciona
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Critico |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - auth / rate limiting |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — AUTH-06) |
+
+**Descripcion:** 6 intentos de login fallido en menos de 1 minuto no generan bloqueo temporal ni muestran mensaje explicativo al usuario. Vulnerabilidad de seguridad — permite ataques de fuerza bruta ilimitados.
+
+**Pasos para reproducir:**
+1. Ir a /login
+2. Ingresar credenciales incorrectas 6 veces en menos de 1 minuto
+3. Observar que no hay bloqueo
+
+**Esperado:** Bloqueo temporal de la cuenta con mensaje explicativo.
+**Actual:** Sistema sigue permitiendo intentos sin restriccion.
+
+**Notas:** AUTH-05 (3 intentos con password erroneo) si muestra mensajes de error sin revelar que fallo. El rate limiting debe aplicarse a nivel de IP y de cuenta.
+
+**Notas de cierre (26-Mar-2026):** `RATE_LIMIT.LOGIN` configurado en auth.routes.ts. Fastify rate-limit plugin registrado globalmente en main.ts.
+
+---
+
+### BUG-023: Recuperacion de contrasena — email no llega
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - auth / email service |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — AUTH-08) |
+
+**Descripcion:** El flujo de "olvide mi contrasena" no envia el email al usuario. El flujo falla silenciosamente.
+
+**Pasos para reproducir:**
+1. Ir a /login > "Olvide mi contrasena"
+2. Ingresar email registrado
+3. Verificar bandeja de entrada (y spam)
+
+**Esperado:** Email con enlace de recuperacion en menos de 2 minutos.
+**Actual:** Email no llega.
+
+**Causa probable:** Puede estar relacionado con BUG-027 (SES sin validar en QA). Verificar si SES esta en sandbox y el email destino esta verificado.
+
+**Notas de cierre (27-Mar-2026):** Cerrado junto con BUG-027 — SES validado en QA. Flujo de recuperacion de contrasena verificado funcional.
+
+---
+
+### BUG-024: Error al guardar configuracion de usuarios desde Admin
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - admin / users |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — AUTH-02) |
+
+**Descripcion:** Al intentar guardar cambios en la configuracion de usuarios desde el panel Admin, el sistema arroja un error. Detectado durante prueba de registro como EMPLOYEE.
+
+**Pasos para reproducir:**
+1. Login como ADMIN
+2. Ir a panel de administracion > Gestion de usuarios
+3. Seleccionar un usuario y editar su configuracion
+4. Guardar cambios
+
+**Esperado:** Cambios guardados con confirmacion.
+**Actual:** Error al guardar. Cambios no se persisten.
+
+**Notas:** ADM-02 (desactivar usuario) si funciona. El error es especifico a edicion de configuracion.
+
+**Notas de cierre (26-Mar-2026):** PATCH /users/:id con validacion Zod y admin.service.updateUser() implementado.
+
+---
+
+### BUG-025: Capsula de video Vimeo — URL firmada no se genera
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - capsulas / Vimeo integration |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — ADM-05) |
+
+**Descripcion:** Al crear una capsula de video desde el Admin asignando una URL de Vimeo, el sistema no genera la URL firmada (TTL 4h) y el video no reproduce. Bloquea criterio GL1 #6 (completar cursos con video).
+
+**Pasos para reproducir:**
+1. Login como ADMIN
+2. Ir a gestion de cursos > crear/editar capsula de tipo Video
+3. Asignar URL valida de Vimeo
+4. Guardar y verificar reproduccion
+
+**Esperado:** URL firmada con TTL de 4 horas generada; video reproduce.
+**Actual:** URL firmada no se genera. Video no reproduce.
+
+**Notas:** Relacionado con BUG-026 (YouTube) y LMS-07 (video auto-completar capsula).
+
+**Notas de cierre (26-Mar-2026):** Cerrado como "By Design". URLs externas (Vimeo, YouTube) se almacenan y retornan as-is. El embed player de Vimeo maneja su propia autenticacion. No se requiere URL firmada — el frontend embede el player directamente.
+
+---
+
+### BUG-026: Video URL de YouTube genera error en capsula de modulo
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - capsulas / video validation |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Cerrado** | 2026-03-28 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — LMS-04) |
+
+**Descripcion:** Al agregar URL de YouTube en campo Video URL de una capsula, el sistema genera error. Detectado en curso "Fundamentos del Marketing Digital", modulo CMP-01, capsula "Que es el Marketing Digital?".
+
+**Pasos para reproducir:**
+1. Login como ADMIN
+2. Editar capsula con URL de YouTube
+3. Guardar
+
+**Esperado:** URL guardada correctamente o mensaje claro de que solo se soporta Vimeo.
+**Actual:** Error tecnico al guardar o reproducir.
+
+**Causa probable:** El stack oficial usa Vimeo (ADR). Si YouTube no es compatible, el error debe ser un mensaje claro, no un error tecnico.
+
+**Resolucion:** No es bug del LMS. YouTube bloquea embeds desde dominios no autorizados. El stack oficial usa Vimeo (ADR). Comportamiento esperado.
+
+---
+
+### BUG-027: Email de bienvenida no llega — AWS SES sin validar en QA
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Infra |
+| **Componente** | AWS SES / devops.lms.fundes |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — NOTIF-01) |
+
+**Descripcion:** Email de bienvenida tras registro exitoso no se recibe. Falta validacion/configuracion de AWS SES en ambiente QA. Impacta tambien BUG-023 (recuperacion de contrasena) y BUG-029 (OTP).
+
+**Pasos para reproducir:**
+1. Registrar nuevo usuario
+2. Completar flujo de registro
+3. Verificar bandeja de entrada (incluyendo spam)
+
+**Esperado:** Email de bienvenida en menos de 2 minutos.
+**Actual:** Email no llega.
+
+**Causa probable:** SES en modo sandbox (solo emails verificados pueden recibir). Verificar dominio/email de envio, logs de SES en CloudWatch.
+
+**Notas de cierre (27-Mar-2026):** AWS SES validado y configurado en QA. Email de bienvenida se envia correctamente. BUG-023 y BUG-029 cerrados como consecuencia.
+
+---
+
+### BUG-028: Landing page — "Ver Cursos" bloqueado para visitantes
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - landing / routing auth |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-17 |
+| **Sesion QA** | Trello (Adam Name, QA GL-1 — SEC) |
+
+**Descripcion:** En la landing page publica, "Ver Cursos" esta bloqueado para visitantes no autenticados. Deberia ser accesible publicamente para que visitantes vean la oferta antes de registrarse.
+
+**Pasos para reproducir:**
+1. Abrir landing page sin estar autenticado
+2. Intentar acceder a "Ver Cursos" o catalogo publico
+
+**Esperado:** Catalogo accesible sin login.
+**Actual:** Seccion bloqueada. No se puede ver catalogo sin autenticacion.
+
+**Causa probable:** Ruta del catalogo tiene middleware de auth que no deberia aplicar a visitantes. Confirmar con PO si catalogo publico es requisito GL1 o GL2.
+
+**Notas de cierre (26-Mar-2026):** E2E block-0 confirma `/courses` accesible sin auth. Ruta correctamente configurada.
+
+---
+
+### BUG-029: OTP email no llega — usuario se registra sin validar codigo
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Infra |
+| **Componente** | Backend - auth / SES / SQS email worker |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-22 |
+| **Sesion QA** | Trello (FLU-OWN-002) |
+
+**Descripcion:** Al registrarse, la plataforma muestra ventana de codigo OTP pero el email nunca llega. El usuario queda creado en DB sin verificacion de email. El codigo esta completo (OTP 6 digitos, Redis TTL 5min, envio via SES+SQS, pagina de verificacion con rate limiting).
+
+**Pasos para reproducir:**
+1. Ir a /register
+2. Completar formulario de registro
+3. Observar ventana de codigo OTP
+4. Verificar que email no llega
+
+**Esperado:** Email con codigo OTP en menos de 2 minutos.
+**Actual:** Email no llega. Usuario queda sin verificar.
+
+**Causa probable:** `EMAIL_ENABLED` posiblemente false en env vars de ECS. SES en sandbox mode. `AWS_SES_FROM_EMAIL` sin verificar. SQS email queue sin configurar. Worker de email sin correr.
+
+**Archivos relevantes:** `code.lms.fundes/backend/src/modules/auth/auth.service.ts`, `src/workers/email.handler.ts`, `src/config/environments/qa.preset.ts`.
+
+**Notas de cierre (27-Mar-2026):** Cerrado junto con BUG-027 — SES validado en QA. OTP llega correctamente; flujo de verificacion de email funcional.
+
+---
+
+### BUG-030: Ver Resultados del Diagnostico muestra pagina en blanco
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - DiagnosisResultPage / routing CloudFront |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-22 |
+| **Sesion QA** | Trello (FLU-OWN-008/009) |
+
+**Descripcion:** Al completar diagnostico y hacer clic en "Ver Resultados" desde la pestana Historial, la pagina queda en blanco. El codigo del assessment frontend esta completo (DiagnosisResultPage con radar chart, scores, PDF download).
+
+**Pasos para reproducir:**
+1. Completar diagnostico
+2. Ir a Historial
+3. Click en "Ver Resultados"
+
+**Esperado:** Pagina con resultados (radar chart, scores por dimension, boton PDF).
+**Actual:** Pagina en blanco.
+
+**Causa probable:** Routing CloudFront LMS<>Assessment. El usuario accede a `qa.lms.fundes.org/diagnostic` (LMS frontend) pero los resultados viven en assessment frontend (`/assessment/diagnosis/:id/result`). Posible desconexion entre rutas.
+
+**Notas de cierre (27-Mar-2026):** Routing CloudFront corregido. DiagnosisResultPage carga correctamente desde assessment frontend.
+
+---
+
+### BUG-031: Barra de progreso no se actualiza al marcar leccion completada
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - CoursePlayerPage sidebar / React Query |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-22 |
+| **Sesion QA** | Trello (US-035) |
+
+**Descripcion:** Al dar clic en "Marcar como completada" dentro de las lecciones, la barra de progreso en el panel izquierdo del player no se actualiza. El avance si se refleja correctamente en "Mis Cursos" (al recargar o navegar). Backend calcula progreso correctamente.
+
+**Pasos para reproducir:**
+1. Login como usuario inscrito en un curso
+2. Abrir curso en player
+3. Marcar leccion como completada
+4. Observar barra de progreso en sidebar
+
+**Esperado:** Barra de progreso se actualiza inmediatamente.
+**Actual:** Barra no refleja el cambio hasta recargar.
+
+**Causa probable:** La invalidacion de React Query esta implementada (`onSuccess` invalida `['progress']` y `['enrollments']`) pero puede haber edge case de timing, key mismatch, o componente que no consume la query invalidada. Puede estar ya corregido post-testing 19-20 Mar.
+
+**Notas de cierre (26-Mar-2026):** React Query invalidation verificada en useProgress hook. Cache se invalida correctamente en onSuccess.
+
+---
+
+### BUG-032: Gestor multimedia no permite subir Videos, PDF ni Audios
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Infra |
+| **Componente** | AWS S3 / Backend - media service / devops.lms.fundes |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-22 |
+| **Sesion QA** | Trello (FLU-OWN-012/013/014) |
+
+**Descripcion:** La plataforma no permite subir videos, PDFs ni audios desde el gestor multimedia admin. La UI de upload existe pero las subidas fallan. El codigo esta completo (presigned S3 upload, confirm endpoint, MIME validation, 500MB limit, drag&drop UI).
+
+**Pasos para reproducir:**
+1. Login como ADMIN
+2. Ir a Admin > Multimedia
+3. Intentar subir un video, PDF o audio
+
+**Esperado:** Archivo subido exitosamente.
+**Actual:** Subida falla.
+
+**Causa probable:** Infraestructura S3 no provisionada en QA: bucket no creado en Terraform, IAM role sin permisos `s3:PutObject`/`s3:GetObject`, env var `AWS_S3_BUCKET` no configurada en task definition, CORS del bucket no configurado para presigned uploads.
+
+**Notas de cierre (27-Mar-2026):** Infraestructura S3 provisionada en QA. Bucket, IAM roles, CORS y env vars configurados. Subida de archivos funcional.
+
+---
+
+### BUG-033: reset-progress HTTP 500 — UUID cast en SQL raw
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - test-setup route |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-23 |
+| **Sesion QA** | e2e-qa-full-e2e.2026-03-22.1304 |
+
+**Descripcion:** El endpoint `POST /api/v1/lms/test/setup` con `action: "reset-progress"` retorna HTTP 500 en QA. Error de cast UUID en query SQL raw del backend LMS.
+
+**Pasos para reproducir:**
+1. Tener un enrollment de `owner@test.com` en `transformacion-digital-pymes` con progreso > 0%
+2. Llamar `POST /api/v1/lms/test/setup` con `{ action: "reset-progress", email: "owner@test.com", courseSlug: "transformacion-digital-pymes" }`
+
+**Esperado:** Progreso reseteado exitosamente.
+**Actual:** HTTP 500 — UUID cast error.
+
+**Causa probable:** SQL raw sin `::uuid` cast en parametro. Fix: usar Prisma ORM en lugar de SQL raw, o agregar cast.
+
+**Notas de cierre (26-Mar-2026):** Refactorizado a Prisma ORM (sin SQL raw). E2E block-0 valida: `reset-progress does not return 500` PASS.
+
+---
+
+### BUG-034: PATCH /notifications/preferences/:type retorna error en QA
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - notifications module |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-23 |
+| **Sesion QA** | e2e-qa-full-e2e.2026-03-22.1304 |
+
+**Descripcion:** El endpoint `PATCH /api/v1/lms/notifications/preferences/:type` retorna error al actualizar preferencias de tipo `COURSE_ENROLLED`. Los endpoints GET del mismo modulo funcionan correctamente (200).
+
+**Pasos para reproducir:**
+1. Obtener token de `owner@test.com`
+2. `PATCH /api/v1/lms/notifications/preferences/COURSE_ENROLLED` con `{ "emailEnabled": false, "inAppEnabled": true }`
+
+**Esperado:** HTTP 200 con datos actualizados.
+**Actual:** Codigo de error.
+
+**Causa probable:** Validacion del enum `notificationType` incorrecta, logica de upsert en DB, o desincronizacion de migracion del enum en QA.
+
+**Notas de cierre (26-Mar-2026):** Endpoint configurado con `updatePreferenceSchema` Zod y handler correcto. E2E Perfil/Seguridad block-9 pasa 34/34.
+
+---
+
+### BUG-035: Filtros del catalogo no reflejan cambios en UI
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - CourseCatalogPage |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-23 |
+| **Sesion QA** | e2e-qa-full-e2e.2026-03-22.1304 |
+
+**Descripcion:** En el catalogo de cursos, al aplicar filtros (bloque, categoria, estado de inscripcion), la lista de cursos no se actualiza. El catalogo muestra todos los cursos independientemente del filtro activo.
+
+**Pasos para reproducir:**
+1. Login como `employee@test.com`
+2. Navegar a /courses
+3. Aplicar cualquier filtro
+4. Observar que la lista no cambia
+
+**Esperado:** Catalogo filtrado por criterio seleccionado.
+**Actual:** Lista no cambia al aplicar filtros.
+
+**Causa probable:** Handler del filtro no actualiza React Query/Zustand, query params no se pasan al endpoint GET /courses, o componente filtra localmente sin re-fetch.
+
+**Notas de cierre (26-Mar-2026):** Filtros conectados a Zustand store + useCourses refetch. Codigo verificado.
+
+---
+
+### BUG-036: Score-gating — catalogo completo no filtra por diagnosis score
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Backend - courses module / score gating logic |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-23 |
+| **Diferido** | 2026-03-28 |
+| **Sesion QA** | e2e-qa-full-e2e.2026-03-22.1304 |
+
+**Descripcion:** Usuario `owner@test.com` con diagnostico completado (score 65) deberia ver todos los cursos publicados (REGULAR + SENSIBILIZACION). Los cursos de bloque REGULAR no aparecen aunque el score supere el threshold.
+
+**Pasos para reproducir:**
+1. Login como `owner@test.com` (diagnostico completado, score 65)
+2. Navegar a /courses
+3. Observar cursos disponibles
+
+**Esperado:** Todos los cursos publicados visibles para score >= 50.
+**Actual:** Cursos REGULAR no aparecen.
+
+**Causa probable:** Problema de propagacion cross-schema: score del diagnostico en `assessment.diagnoses`, gating en `lms.courses`. La logica de `scoreThreshold` no evalua correctamente. Ver ADR-SYS-009 (cross-schema read) y ADR-LMS-007 (progressive unlock).
+
+**Notas:** TC-SG-01 y TC-SG-02 pasan correctamente. TC-SG-03 y TC-SG-04 fallan.
+
+**E2E 26-Mar-2026:** TC-SG-03 sigue fallando — no muestra cursos publicados con diagnostico completado. Logica de `getLatestDiagnosisScore()` puede no encontrar score cross-schema en QA.
+
+**Diferimiento:** No bloqueante para GL1 — todos los cursos de sensibilizacion son visibles sin score. Score-gating para cursos REGULAR se implementa 1ra semana de abril (GL2-Dev).
+
+---
+
+### BUG-038: Faltan acentos en paginas Admin (Cursos, Multimedia, Preguntas)
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Bajo |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - i18n / locales ES |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-23 |
+| **Sesion QA** | Trello (UAT Admin Fundes — Sofia Alba, Alonso, 23-Mar-2026) |
+
+**Descripcion:** Multiples labels y textos en paginas de administracion no tienen acentos correctos en espanol: "Titulo" (Título), "Descripcion" (Descripción), "Duracion" (Duración), "aqui" (aquí), "Dimension" (Dimensión).
+
+**Ubicaciones:**
+- Formulario Cursos (Admin > Cursos > Crear/Editar)
+- Gestor Multimedia (Admin > Multimedia)
+- Banco de Preguntas (Admin > Preguntas > Filtros)
+
+**Pasos para reproducir:**
+1. Login como Admin
+2. Navegar por Cursos, Multimedia, Preguntas
+3. Observar labels sin acentos
+
+**Esperado:** Todos los labels con acentos correctos en espanol.
+**Actual:** Multiples labels sin acentos.
+
+**Causa probable:** Archivos i18n (`code.lms.fundes/frontend/src/locales/es.json`, `code.assessment.fundes/frontend/src/locales/es.json`) con keys sin acentos.
+
+**Notas de cierre (26-Mar-2026):** Acentos corregidos en i18n. E2E block-0 valida `admin pages have correct Spanish accents` PASS.
+
+---
+
+### BUG-039: Assessment InitPage no redirige a LMS login
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - InitPage / env vars |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-24 |
+| **Cerrado** | 2026-03-28 |
+| **Sesion QA** | E2E 2026-03-24 (TC-ASB-01) |
+
+**Descripcion:** La pagina `/init` del frontend de Assessment no redirige al login del LMS cuando el usuario no tiene sesion activa. La pagina queda en blanco o muestra error.
+
+**Pasos para reproducir:**
+1. Abrir https://qa.assessment.fundes.org/init sin sesion activa
+2. Observar que no hay redirect a login del LMS
+
+**Esperado:** Redirect a https://qa.lms.fundes.org/login.
+**Actual:** Sin redirect — pagina sin respuesta.
+
+**Causa probable:** `VITE_LMS_URL` en el build de QA del Assessment frontend puede apuntar a URL incorrecta. Revisar `.env.qa` del frontend de Assessment.
+
+**Resolucion:** Fallback hardcodeado a `localhost:5173` en `VITE_LMS_URL` eliminado (`5e649da`). `.env.qa` apunta correctamente a `https://qa.lms.fundes.org`. Validado con Playwright local: /init sin tokens redirige a /login.
+
+---
+
+### BUG-040: Registro de Owner no envia POST /auth/register
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - registro Owner / form submit |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-24 |
+| **Sesion QA** | E2E 2026-03-24 (Journey Owner) |
+
+**Descripcion:** El formulario de registro de Owner no ejecuta el POST a `/auth/register` al hacer submit. El formulario se muestra pero al hacer submit no se realiza ninguna llamada a la API.
+
+**Pasos para reproducir:**
+1. Navegar al formulario de registro de usuario Owner
+2. Completar todos los campos requeridos
+3. Click en Submit/Registrar
+4. Observar Network tab — no hay llamada POST a /auth/register
+
+**Esperado:** POST a /api/v1/auth/register con datos del formulario.
+**Actual:** No se ejecuta ninguna llamada de red.
+
+**Notas de cierre (26-Mar-2026):** `registerUser()` hook correctamente conectado al submit del formulario. Journey Owner E2E 29/29.
+
+---
+
+### BUG-042: Cursos de Sensibilizacion no todos visibles en catalogo como User
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - Catalogo / Backend - filtrado de cursos |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-26 |
+| **Sesion QA** | QA TESTS GL 1.txt (migracion) |
+
+**Descripcion:** Al navegar al catalogo como usuario autenticado, no todos los cursos del bloque de Sensibilizacion son visibles. Solo aparece "Fundamentos del Marketing Digital"; el resto de cursos del bloque no se muestra.
+
+**Pasos para reproducir:**
+1. Login como OWNER
+2. Ir al catalogo de cursos
+3. Filtrar por bloque Sensibilizacion (o navegar sin filtro)
+4. Observar que solo aparece un curso del bloque
+
+**Esperado:** Todos los cursos publicados del bloque Sensibilizacion aparecen en el catalogo.
+**Actual:** Solo se muestra "Fundamentos del Marketing Digital".
+
+**Causa probable:** Posible issue de score-gating, estado de publicacion incorrecto en seed de QA, o filtro de bloque que excluye cursos por condicion no esperada.
+
+**Notas de cierre (27-Mar-2026):** Cerrado — cursos de Sensibilizacion visibles correctamente en catalogo tras correccion de seed de QA.
+
+---
+
+### BUG-043: Video no carga en algunas versiones moviles, sobre todo en Android
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Abierto |
+| **Producto** | LMS |
+| **Componente** | Frontend - Capsula de Video / reproductor / Vista Previa Admin |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-26 |
+| **Sesion QA** | QA TESTS GL 1.txt (migracion) |
+
+**Descripcion:** Al entrar al curso y capsulas de video, asi como en Vista Previa como Admin, el video no inicia al darle al boton play. El problema se presenta principalmente en versiones moviles, especialmente en Android.
+
+**Pasos para reproducir:**
+1. Login como Owner o Employee → entrar a un curso con capsula de video → dar click en play
+2. Login como Admin → abrir Vista Previa de una capsula de video → dar click en play
+
+**Esperado:** El video inicia la reproduccion al darle al boton play.
+**Actual:** El video no inicia — el boton play no responde o el reproductor queda estatico.
+
+**Causa probable:** Posible conflicto con la URL firmada de Vimeo (token expirado o mal generado), politica de autoplay del navegador bloqueando el embed, o error en el componente reproductor al recibir la URL del video.
+
+---
+
+### BUG-044: PDF en version movil se descarga automaticamente en vez de preview
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Abierto |
+| **Producto** | LMS |
+| **Componente** | Frontend - Capsula PDF / visor movil |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-26 |
+| **Sesion QA** | QA TESTS GL 1.txt (migracion) |
+
+**Descripcion:** En version movil, al acceder a una capsula de tipo PDF dentro de un curso, el archivo no muestra una vista previa en pantalla sino que se descarga automaticamente o solicita permiso para descarga. La experiencia esperada es mostrar el PDF en un visor embebido.
+
+**Pasos para reproducir:**
+1. Acceder a https://qa.lms.fundes.org desde dispositivo movil
+2. Entrar a un curso con capsulas de tipo PDF
+3. Abrir una capsula PDF
+4. Observar comportamiento del archivo
+
+**Esperado:** El PDF se muestra en un visor embebido dentro de la aplicacion.
+**Actual:** El archivo se descarga automaticamente o el navegador pregunta si descargar.
+
+**Causa probable:** Los navegadores moviles no soportan `<iframe>` o `<embed>` para PDFs de la misma manera que desktop. Se requiere un visor alternativo (ej. PDF.js o Google Docs Viewer) para movil.
+
+---
+
+### BUG-045: Resultados Assessment no indica nivel de madurez (diagnosisResult:inicial)
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - DiagnosisResultPage / Backend - diagnosis scoring |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-27 |
+| **Sesion QA** | Reporte manual |
+
+**Descripcion:** La pagina de resultados del diagnostico no muestra el nivel de madurez digital del usuario (ej. "Inicial", "En desarrollo", "Avanzado"). El campo `diagnosisResult` con valor `inicial` (u otros niveles) no se renderiza en la vista de resultados.
+
+**Pasos para reproducir:**
+1. Completar un diagnostico como Owner con puntajes bajos
+2. Ir a pagina de resultados
+3. Observar si se muestra el nivel de madurez
+
+**Esperado:** Nivel de madurez claramente indicado (ej. "Nivel: Inicial").
+**Actual:** El nivel de madurez no aparece en la pantalla de resultados.
+
+**Causa probable:** El campo `diagnosisResult` puede no estar siendo mapeado desde la respuesta de la API al componente de resultados, o la condicion de renderizado omite el nivel cuando el valor es "inicial".
+
+---
+
+### BUG-047: IA genera pregunta de diagnostico con texto incorrecto
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Backend - AI question generation / conversation flow |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-27 |
+| **Sesion QA** | Reporte manual |
+
+**Descripcion:** En el modo conversacional del diagnostico (o en el backup), la IA genera una pregunta con texto incorrecto: *"Aparte para herramientas o mejoras digitales en tu negocio?"*. La formulacion correcta es: *"¿Tienen dinero separado especificamente para herramientas o mejoras digitales en el negocio?"*.
+
+**Pasos para reproducir:**
+1. Iniciar diagnostico como Owner
+2. Avanzar hasta la pregunta sobre presupuesto digital
+3. Observar el texto de la pregunta generada
+
+**Esperado:** "¿Tienen dinero separado especificamente para herramientas o mejoras digitales en el negocio?"
+**Actual:** "Aparte para herramientas o mejoras digitales en tu negocio?"
+
+**Causa probable:** El prompt del agente de IA o el script de preguntas de backup contiene el texto incorrecto. Revisar `question_bank` o el system prompt del agente de diagnostico.
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo.
+
+---
+
+### BUG-048: Respuesta "Error" se repite en respuestas de Assessment
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Backend - assessment response handler / Frontend - chat UI |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-27 |
+| **Sesion QA** | https://qa.lms.fundes.org/assessment/public/report/988f45b0-2cd5-4d90-a39f-56c89454d1eb |
+
+**Descripcion:** En el reporte del assessment, la respuesta "Error" aparece repetida multiples veces entre las respuestas del diagnostico. Indica que el handler de respuestas esta capturando y guardando errores de procesamiento como si fueran respuestas validas del usuario.
+
+**Pasos para reproducir:**
+1. Acceder al reporte: https://qa.lms.fundes.org/assessment/public/report/988f45b0-2cd5-4d90-a39f-56c89454d1eb
+2. Revisar la lista de respuestas
+
+**Esperado:** Solo respuestas validas del usuario (SI/NO, opciones seleccionadas).
+**Actual:** La respuesta "Error" aparece repetida en el listado de respuestas.
+
+**Causa probable:** El handler de errores del agente de IA esta llamando al metodo de guardado de respuesta con el texto "Error" en lugar de manejar el error en silencio o reintentar. Revisar `assessment.service.ts` o el callback de error del agente.
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo.
+
+---
+
+### BUG-049: Ultima pregunta YES/NO — respuesta no es visible
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - chat assessment / OptionSelector YES/NO |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-27 |
+| **Sesion QA** | Reporte manual |
+
+**Descripcion:** En la ultima pregunta del diagnostico de tipo YES/NO, los botones de respuesta no son visibles para el usuario. El usuario no puede seleccionar ninguna opcion y el diagnostico queda bloqueado en ese paso.
+
+**Pasos para reproducir:**
+1. Iniciar diagnostico como Owner
+2. Avanzar hasta la ultima pregunta de tipo YES/NO
+3. Observar si aparecen los botones de respuesta
+
+**Esperado:** Botones SI / NO visibles y seleccionables.
+**Actual:** Los botones de respuesta no se muestran en pantalla.
+
+**Causa probable:** Posible error de renderizado condicional en el componente `OptionSelector` cuando es la ultima pregunta de la secuencia. Revisar si hay logica de `isLastQuestion` que altere el render, o un problema de scroll que oculte los botones fuera del viewport.
+
+**Notas de cierre (29-Mar-2026):** Cerrado por confirmacion del equipo.
+
+---
+
+### BUG-050: Barra de busqueda del catalogo no se limpia al borrar el texto
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - CourseCatalogPage / barra de busqueda |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-27 |
+| **Sesion QA** | Reporte manual |
+
+**Descripcion:** Al buscar un curso por nombre en el catalogo y luego borrar el texto de la barra de busqueda, el catalogo no se actualiza y sigue mostrando los resultados filtrados. El filtro por nombre permanece activo aunque el campo de busqueda este vacio.
+
+**Pasos para reproducir:**
+1. Login como Owner o Employee
+2. Ir al catalogo de cursos
+3. Escribir el nombre de un curso en la barra de busqueda
+4. Observar que el catalogo filtra correctamente
+5. Borrar el texto de la barra de busqueda
+6. Observar que el catalogo NO se actualiza
+
+**Esperado:** Al borrar el texto, el catalogo regresa a mostrar todos los cursos disponibles.
+**Actual:** El catalogo mantiene el filtro activo con los resultados de la ultima busqueda.
+
+**Causa probable:** El handler del input de busqueda no dispara un re-fetch o reset del estado cuando el valor queda vacio. Revisar si hay condicion `if (query.length > 0)` que omita limpiar el filtro, o si el debounce no se ejecuta para el caso de string vacio.
+
+---
+
+### BUG-051: Banner de Iniciar Diagnostico persiste en Mis Cursos tras completar diagnostico
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado |
+| **Producto** | LMS |
+| **Componente** | Frontend - MyCourses / banner de diagnostico |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-29 |
+| **Sesion QA** | Reporte manual |
+
+**Descripcion:** El banner amarillo que invita a iniciar el diagnostico sigue visible en la pagina "Mis Cursos" incluso despues de que el usuario Owner ya completo el diagnostico. El banner deberia desaparecer o actualizarse una vez que el diagnostico fue completado.
+
+**Pasos para reproducir:**
+1. Login como Owner
+2. Completar el diagnostico de madurez digital
+3. Navegar a Mis Cursos
+4. Observar que el banner amarillo "Iniciar Diagnostico" sigue visible
+
+**Esperado:** El banner desaparece (o se actualiza) una vez que el diagnostico fue completado.
+**Actual:** El banner permanece visible aunque el diagnostico ya este completado.
+
+**Causa probable:** El componente del banner no consulta el estado del diagnostico del usuario, o la condicion de renderizado no evalua correctamente el campo `diagnosisCompleted` / `diagnosisStatus` del perfil del Owner.
+
+---
+
+### BUG-070: Al finalizar Assessment no muestra resultados — redirige a Como Inicio
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Cerrado |
+| **Producto** | Assessment |
+| **Componente** | Frontend - flujo de finalizacion / pantalla de resultados |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-29 |
+| **Sesion QA** | — |
+
+**Descripcion:** Al completar el assessment, la aplicacion no muestra la pantalla de resultados. En cambio, redirige automaticamente a "Como Inicio" (home). El usuario debe navegar manualmente a Historial para poder ver sus resultados.
+
+**Pasos para reproducir:**
+1. Login como Owner sin diagnostico previo
+2. Completar el flujo completo del diagnostico de madurez digital
+3. Observar que al finalizar la ultima pregunta, no aparece la pantalla de resultados
+4. La app redirige a "Como Inicio"
+
+**Esperado:** Al finalizar el assessment, mostrar la pantalla de resultados con nivel de madurez, puntaje y recomendaciones.
+**Actual:** Redirige a "Como Inicio". El usuario debe ir manualmente a Historial para ver sus resultados.
+
+**Causa probable:** La logica de navegacion post-diagnostico no redirige a la ruta de resultados, o el estado del diagnostico no se actualiza correctamente antes de la redireccion.
+
+---
+
+### BUG-071: Banner de inscripcion no muestra mensaje especifico al intentar inscribirse a curso bloqueado
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Cerrado (→ MEJ-076) |
+| **Producto** | LMS |
+| **Componente** | Frontend - CourseCard / banner de inscripcion |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-30 |
+| **Sesion QA** | — |
+
+**Descripcion:** Al intentar inscribirse a un curso bloqueado (por requerimiento de diagnostico no completado o score insuficiente), el banner no muestra un mensaje especifico que explique el motivo del bloqueo. El usuario no sabe si debe completar el diagnostico primero o si su puntaje no es suficiente.
+
+**Esperado:** El banner muestra un mensaje claro segun el caso: "Completa tu diagnostico para acceder a este curso" o "Tu puntaje actual no es suficiente para este nivel. Necesitas X puntos."
+**Actual:** No se muestra mensaje especifico — el usuario no recibe feedback del motivo del bloqueo.
+
+**Causa probable:** El componente de CourseCard no diferencia el tipo de error retornado por la API (DIAGNOSIS_REQUIRED vs INSUFFICIENT_SCORE) para mostrar un mensaje contextual al usuario.
+
+---
+
+### BUG-073: Diagnostico no persiste avance — "Continuar" regresa a pregunta 1 y Owner no puede iniciar diagnostico
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Critico |
+| **Estado** | Cerrado |
+| **Producto** | Assessment + LMS |
+| **Componente** | Frontend/Backend - flujo de diagnostico / reanudacion de sesion |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-31 |
+| **Cerrado** | 2026-03-31 |
+| **Sesion QA** | — |
+
+**Descripcion:** El flujo de "Continuar diagnostico" esta roto en multiples escenarios:
+1. Al hacer login y presionar "Continuar diagnostico", el sistema redirige a la **pregunta 1** en vez de retomar donde se quedo, sin conservar las respuestas previas.
+2. Desde el **perfil de OWNER** no es posible iniciar el diagnostico.
+3. Desde la **vista de Admin**, al presionar "Continuar", también regresa a la pregunta 1 sin recuperar el avance.
+
+**Pasos para reproducir:**
+
+**Escenario A — Continuar diagnostico no recupera avance:**
+1. Login como Owner
+2. Iniciar diagnostico y responder varias preguntas (ej: preguntas 1–5)
+3. Cerrar sesion o navegar fuera
+4. Volver a hacer login
+5. Presionar "Continuar diagnostico"
+6. Observar que redirige a la pregunta 1 y no hay respuestas guardadas
+
+**Escenario B — Owner no puede iniciar diagnostico desde perfil:**
+1. Login como Owner
+2. Navegar al perfil del usuario
+3. Intentar iniciar el diagnostico desde esa vista
+4. Observar que la accion no funciona / no navega al assessment
+
+**Escenario C — Vista Admin: "Continuar" regresa a pregunta 1:**
+1. Login como Admin (o impersonar a un Owner con diagnostico en progreso)
+2. Acceder a la vista de admin relacionada con el diagnostico del usuario
+3. Presionar "Continuar"
+4. Observar que redirige a la pregunta 1 sin recuperar el avance
+
+**Esperado:**
+- "Continuar diagnostico" reanuda desde la ultima pregunta respondida, con todas las respuestas previas preservadas.
+- El Owner puede iniciar el diagnostico desde su perfil.
+- Admin puede retomar el diagnostico de un usuario desde la ultima pregunta guardada.
+
+**Actual:**
+- "Continuar" redirige siempre a pregunta 1.
+- Las respuestas previas no se recuperan.
+- Desde el perfil de Owner, iniciar diagnostico no funciona.
+
+**Causa probable:** La sesion del diagnostico (progreso parcial + respuestas) no se persiste correctamente en backend, o el endpoint de reanudacion no retorna el `questionIndex` ni las respuestas previas. El frontend puede estar ignorando el estado guardado y siempre inicializando desde la pregunta 1.
+
+---
+
+### BUG-074: Cursos recomendados no filtran por nivel de madurez — aparecen cursos de nivel avanzado en Nivel 1
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Abierto |
+| **Producto** | LMS |
+| **Componente** | Frontend/Backend - seccion de cursos destacados/recomendados / logica de recomendacion por score |
+| **Ambiente** | qa |
+| **Reportado** | 2026-03-31 |
+
+**Descripcion:** La seccion de cursos recomendados/destacados no respeta el nivel de madurez del usuario en ningun nivel. Se identificaron dos escenarios:
+
+- **Nivel 1:** se muestran cursos de niveles avanzados que no corresponden al resultado del diagnostico.
+- **Nivel avanzado:** se muestran cursos de categorias superiores al nivel obtenido (ej: "Lider Digital") y el sistema **permite inscribirse** a esos cursos aunque el usuario este un nivel por debajo del requerido.
+
+Segun la logica de negocio, los cursos recomendados deben mostrar unicamente: cursos de sensibilizacion (todos los niveles) + cursos del nivel exacto del usuario. Ademas, la inscripcion a cursos de nivel superior debe estar bloqueada (score-gating).
+
+**Pasos para reproducir:**
+
+**Escenario A — Usuario Nivel 1 ve cursos avanzados en recomendados:**
+1. Login como Owner sin diagnostico completado
+2. Completar el diagnostico y obtener resultado de **Nivel 1**
+3. Navegar a la seccion de cursos recomendados / destacados
+4. Observar que aparecen cursos de Nivel 2+ en la lista
+
+**Escenario B — Usuario nivel avanzado ve cursos de categoria superior y puede inscribirse:**
+1. Login como Owner sin diagnostico completado
+2. Completar el diagnostico y obtener un resultado de **nivel avanzado** (ej: Nivel 2 o Nivel 3)
+3. Navegar a la seccion de cursos recomendados / destacados
+4. Observar que aparecen cursos de la categoria inmediatamente superior (ej: "Lider Digital") a la que el usuario aun no ha llegado
+5. Intentar inscribirse a uno de esos cursos superiores
+6. Observar que la inscripcion es permitida sin restriccion
+
+**Esperado:**
+- Recomendados muestra solo cursos de sensibilizacion + cursos del nivel exacto del usuario.
+- Cursos de nivel superior no aparecen en recomendados.
+- Inscripcion a cursos fuera del nivel del usuario esta bloqueada (score-gating activo).
+
+**Actual:**
+- Nivel 1: se muestran cursos de Nivel 2+ en recomendados.
+- Nivel avanzado: se muestran cursos de la categoria superior (ej: "Lider Digital") y se permite la inscripcion sin bloqueo.
+
+**Causa probable:** El endpoint o la logica frontend que construye la lista de cursos recomendados no aplica el filtro por `diagnosisLevel` / `score` del usuario. El score-gating de inscripcion tampoco valida correctamente el nivel requerido por el curso versus el nivel actual del usuario.
+
+---
+
+### BUG-075: Dark mode no actualiza pantalla de Resultados del Assessment — requiere refresco manual
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Medio |
+| **Estado** | Abierto |
+| **Producto** | Assessment + LMS |
+| **Componente** | Frontend — pantalla de Resultados del Assessment / contexto de tema (dark mode) |
+| **Ambiente** | QA / Local |
+| **Rol** | OWNER |
+| **Reportado** | 2026-04-08 |
+
+**Descripcion:** Al cambiar entre modo claro y oscuro (y viceversa) desde cualquier parte de la plataforma, el header y la sidebar se actualizan correctamente. Sin embargo, la pantalla de Resultados del Assessment no refleja el cambio de tema hasta que el usuario recarga la pagina manualmente (Ctrl+R o F5).
+
+**Pasos para reproducir:**
+1. Login como OWNER con diagnostico completado
+2. Navegar a la pantalla de Resultados del Assessment
+3. Activar dark mode desde el toggle del header (o viceversa: desactivar)
+4. Observar que el header y la sidebar cambian de tema
+5. Observar que el contenido de la pantalla de Resultados NO cambia de tema
+
+**Esperado:** La pantalla de Resultados del Assessment reacciona al cambio de tema de forma inmediata, al igual que el resto de la plataforma.
+
+**Actual:** Header y sidebar se actualizan al instante. La pantalla de Resultados permanece con el tema previo hasta recargar (Ctrl+R o F5).
+
+**Causa probable:** El componente de Resultados del Assessment no esta suscrito al contexto/store de tema (dark mode). Posiblemente usa clases CSS fijas en lugar de reaccionar al `darkMode: 'class'` de Tailwind, o el re-render no se dispara porque el componente no observa el estado global del tema.
+
+---
+
+### BUG-076: Disparadores — toggle desde lista no persiste, formulario retorna error al guardar sin cambios
+
+| Campo | Valor |
+|-------|-------|
+| **Severidad** | Alto |
+| **Estado** | Abierto |
+| **Producto** | LMS Admin |
+| **Componente** | Frontend + Backend — Admin Disparadores (Notification Triggers) |
+| **Ambiente** | QA |
+| **Rol** | ADMIN |
+| **Reportado** | 2026-04-08 |
+
+**Descripcion:** La gestion de Disparadores desde el panel Admin presenta multiples fallos: el toggle de activar/desactivar desde la lista no persiste en backend, el formulario de edicion retorna error "Invalid Input" al guardar, y los cambios de estado no se propagan al Dashboard de Notificaciones del usuario.
+
+**Pasos para reproducir:**
+
+**Escenario 1 — Toggle desde lista no persiste:**
+1. Login como ADMIN, navegar a Admin → Disparadores
+2. Desactivar el disparador "Inscripcion de Curso" desde el toggle en la lista
+3. Inscribirse a un curso como OWNER
+4. Observar que la notificacion de inscripcion se envia igualmente — el toggle no persistio
+
+**Escenario 2 — Reactivar desde Editar retorna error:**
+1. Con el disparador desactivado (escenario 1), abrir el formulario de Editar del mismo disparador
+2. Reactivar el toggle dentro del formulario
+3. Dar clic en Guardar
+4. Observar error "Invalid Input" — el cambio no se guarda
+
+**Escenario 3 — Toggle desde lista funciona pero no se refleja en User Dashboard:**
+1. Reactivar el disparador desde el toggle en la lista (sin entrar al formulario)
+2. Verificar que el formulario de Editar refleja el estado actualizado (activo)
+3. Navegar al Dashboard de Notificaciones del usuario OWNER
+4. Observar que el cambio no se refleja — la vista de usuario no actualiza el estado del disparador
+
+**Escenario 4 — Formulario retorna error al guardar sin cambios:**
+1. Abrir el formulario de Editar de cualquier disparador sin modificar ningun campo
+2. Dar clic en Guardar
+3. Observar error al guardar a pesar de no haber realizado cambios
+
+**Esperado:**
+- Toggle desde la lista persiste en backend y afecta el envio real de notificaciones
+- Formulario de Editar guarda correctamente, incluyendo cambios de estado activo/inactivo
+- Cambios en el estado del disparador se reflejan en el Dashboard de Notificaciones del usuario
+- Guardar sin cambios no genera error (operacion idempotente)
+
+**Actual:**
+- Toggle desde lista: cambio visual pero no persiste — notificaciones siguen enviandose
+- Guardar desde formulario con cambio de estado: error "Invalid Input"
+- Toggle desde lista (cuando funciona): no propaga cambios al Dashboard de usuario
+- Guardar desde formulario sin cambios: error al guardar
+
+**Causa probable:** El endpoint `PATCH /api/v1/admin/notification-triggers/:id` posiblemente valida campos de forma estricta y falla cuando el body no incluye todos los campos requeridos (incluso en actualizaciones parciales). El toggle en lista puede estar actualizando solo estado local del frontend sin llamar al backend. La falta de propagacion al Dashboard de usuario sugiere cache no invalidada o ausencia de re-fetch tras el cambio.
